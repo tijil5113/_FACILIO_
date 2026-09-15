@@ -55,6 +55,7 @@ class JobSummary(BaseModel):
     input_version_number: int | None = None
     output_version_id: UUID | None = None
     output_version_number: int | None = None
+    output_profile_status: str | None = None
     queue_name: str
     attempt_count: int
     max_attempts: int

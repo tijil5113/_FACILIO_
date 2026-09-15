@@ -1,6 +1,8 @@
 # Workflows
 
-Phase 6 adds **reusable linear transformation pipelines**. A workflow is a saved ordered list of Phase 5 operations. Public **Run** creates a WorkflowRun snapshot and a Job, then returns 202. A worker executes that snapshot. Preview and validate remain in-request.
+Reusable **Cleanups** are linear transformation pipelines. A Cleanup is a saved ordered list of operations. Public **Run** creates a WorkflowRun snapshot and a Job, then returns 202. A worker executes that snapshot. Preview and validate remain in-request.
+
+Guided Cleanup apply is a one-off of the same engine and does not use Redis.
 
 This is not a DAG engine, scheduler, AI generator, collaborator, or export system. Jobs: [jobs.md](jobs.md).
 

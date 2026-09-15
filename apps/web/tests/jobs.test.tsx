@@ -243,3 +243,43 @@ test("jobs empty state is not fabricated", async () => {
   renderApp(["/jobs"]);
   expect(await screen.findByText("No activity yet")).toBeInTheDocument();
 });
+
+test("activity list shows cleaned version when analysis failed", async () => {
+  vi.stubGlobal(
+    "fetch",
+    mockJobsApi(
+      jobSummary({
+        status: "SUCCEEDED",
+        output_version_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        output_version_number: 2,
+        output_profile_status: "FAILED",
+        current_activity: "Done",
+        progress: { current: 4, total: 4, label: "4 of 4 steps complete" },
+      }),
+    ),
+  );
+  renderApp(["/jobs"]);
+  expect(
+    await screen.findByText("V2 created · Analysis needs attention"),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("No new version")).not.toBeInTheDocument();
+});
+
+test("activity detail keeps open cleaned version after analysis failure", async () => {
+  vi.stubGlobal(
+    "fetch",
+    mockJobsApi(
+      jobSummary({
+        status: "SUCCEEDED",
+        output_version_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        output_version_number: 2,
+        output_profile_status: "FAILED",
+        current_activity: "Done",
+        progress: { current: 4, total: 4, label: "4 of 4 steps complete" },
+      }),
+    ),
+  );
+  renderApp(["/jobs/11111111-1111-4111-8111-111111111111"]);
+  expect(await screen.findByText("Open cleaned version")).toBeInTheDocument();
+  expect(screen.getByText("Retry analysis")).toBeInTheDocument();
+});

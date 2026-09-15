@@ -40,10 +40,10 @@ install-web:
 	cd $(WEB_DIR) && npm install
 
 dev-api:
-	cd $(API_DIR) && .venv/bin/flask --app facilio.app:create_app run --debug --port 5050
+	cd $(API_DIR) && FLASK_SKIP_DOTENV=1 .venv/bin/flask --app facilio.app:create_app run --debug --port 5050
 
 dev-worker:
-	cd $(API_DIR) && .venv/bin/python -m facilio.worker
+	cd $(API_DIR) && FLASK_SKIP_DOTENV=1 .venv/bin/python -m facilio.worker
 
 dev-web:
 	cd $(WEB_DIR) && npm run dev

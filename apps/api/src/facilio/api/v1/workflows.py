@@ -27,8 +27,12 @@ def _service() -> WorkflowService:
 def register(blueprint: Blueprint) -> None:
     @blueprint.get("/workflows")
     def list_workflows():
-        page = request.args.get("page", default=1, type=int) or 1
-        page_size = request.args.get("page_size", default=20, type=int) or 20
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("page_size", default=20, type=int)
+        if page is None:
+            page = 1
+        if page_size is None:
+            page_size = 20
         include = request.args.get("include_archived", default="false")
         payload = _service().list_workflows(
             page=page,
@@ -120,8 +124,12 @@ def register(blueprint: Blueprint) -> None:
 
     @blueprint.get("/workflow-runs")
     def list_runs():
-        page = request.args.get("page", default=1, type=int) or 1
-        page_size = request.args.get("page_size", default=20, type=int) or 20
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("page_size", default=20, type=int)
+        if page is None:
+            page = 1
+        if page_size is None:
+            page_size = 20
         payload = _service().list_runs(
             page=page,
             page_size=page_size,

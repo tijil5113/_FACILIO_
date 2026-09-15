@@ -112,6 +112,22 @@ class JobRepository:
         )
         return list(self.session.scalars(stmt))
 
+    def stale_queued(self, threshold: datetime) -> list[Job]:
+        stmt = (
+            select(Job)
+            .options(selectinload(Job.attempts), selectinload(Job.workflow_run))
+            .where(Job.status == "QUEUED", Job.queued_at < threshold)
+        )
+        return list(self.session.scalars(stmt))
+
+    def failed_with_output(self) -> list[Job]:
+        stmt = (
+            select(Job)
+            .options(selectinload(Job.attempts), selectinload(Job.workflow_run))
+            .where(Job.status == "FAILED", Job.output_version_id.is_not(None))
+        )
+        return list(self.session.scalars(stmt))
+
     def save(self, job: Job) -> Job:
         job.updated_at = datetime.now(UTC)
         self.session.add(job)

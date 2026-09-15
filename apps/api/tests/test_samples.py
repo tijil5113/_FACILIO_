@@ -75,7 +75,7 @@ def test_sample_import_is_idempotent(client) -> None:
     first = client.post("/api/v1/samples/customers/import")
     second = client.post("/api/v1/samples/CUSTOMER_CLEANUP/import")
     assert first.status_code == 201
-    assert second.status_code == 201
+    assert second.status_code == 200
     assert first.get_json()["data"]["id"] == second.get_json()["data"]["id"]
     listed = client.get("/api/v1/datasets")
     assert listed.get_json()["data"]["total"] == 1

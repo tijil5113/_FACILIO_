@@ -72,6 +72,8 @@ class JobExecutor:
         try:
             self._run_attempt(job.id, attempt.id, after_step=after_step)
         except AppError as error:
+            if self._succeed_if_output(job.id, attempt.id):
+                return
             logger.info(
                 "job failed job_id=%s run_id=%s code=%s",
                 job.id,
@@ -80,6 +82,12 @@ class JobExecutor:
             )
             self._fail(job.id, attempt.id, error.code, error.message)
         except Exception:
+            if self._succeed_if_output(job.id, attempt.id):
+                logger.exception(
+                    "job crashed after output job_id=%s; cleanup remains successful",
+                    job.id,
+                )
+                return
             logger.exception("job crashed job_id=%s", job.id)
             self._fail(
                 job.id,
@@ -108,6 +116,32 @@ class JobExecutor:
     def heartbeat_worker(self, *, status: str = "AVAILABLE") -> None:
         with self._database.session_scope() as session:
             WorkerHeartbeatRepository(session).upsert(self._worker_id, status=status)
+
+    def _succeed_if_output(self, job_id: uuid.UUID, _attempt_id: uuid.UUID) -> bool:
+        with self._database.session_scope() as session:
+            job = JobRepository(session).get(job_id)
+            run = (
+                WorkflowRunRepository(session).get(job.workflow_run_id)
+                if job is not None
+                else None
+            )
+            if job is None or run is None or run.output_version_id is None:
+                return False
+            self._mark_output_profile_failed_locked(session, run.output_version_id)
+            self._mark_success_locked(session, job, run)
+            return True
+
+    def _mark_output_profile_failed(self, version_id: uuid.UUID) -> None:
+        with self._database.session_scope() as session:
+            self._mark_output_profile_failed_locked(session, version_id)
+
+    def _mark_output_profile_failed_locked(
+        self, session, version_id: uuid.UUID
+    ) -> None:
+        version = VersionRepository(session).get(version_id)
+        if version is None or version.profile_status == "READY":
+            return
+        version.profile_status = "FAILED"
 
     def _claim(self, job_id: uuid.UUID) -> tuple[Job, JobAttempt] | None:
         with self._database.session_scope() as session:
@@ -364,12 +398,13 @@ class JobExecutor:
                 str(dataset_uuid), str(output_id)
             )
             quality_after = self._quality_after(str(dataset_uuid), str(output_id))
-        except AppError:
-            logger.info(
+        except Exception:
+            logger.exception(
                 "workflow output profile failed dataset_id=%s version_id=%s",
                 dataset_uuid,
                 output_id,
             )
+            self._mark_output_profile_failed(output_id)
         with self._database.session_scope() as session:
             job_row = JobRepository(session).get(job_id)
             run_row = WorkflowRunRepository(session).get(run_id)
@@ -395,6 +430,11 @@ class JobExecutor:
                 return
             if job.status == state.SUCCEEDED:
                 return
+            run = WorkflowRunRepository(session).get(job.workflow_run_id)
+            if run is not None and run.output_version_id is not None:
+                self._mark_output_profile_failed_locked(session, run.output_version_id)
+                self._mark_success_locked(session, job, run)
+                return
             job.status = state.FAILED
             job.completed_at = now
             job.error_code = code
@@ -404,7 +444,6 @@ class JobExecutor:
             job.current_activity = None
             job.heartbeat_at = now
             JobRepository(session).save(job)
-            run = WorkflowRunRepository(session).get(job.workflow_run_id)
             if run is not None and run.output_version_id is None:
                 run.status = "FAILED"
                 run.completed_at = now

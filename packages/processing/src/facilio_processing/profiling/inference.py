@@ -76,7 +76,7 @@ def classify_cardinality(
 
     - CONSTANT: row_count >= 3 and distinct_count <= 1
     - UNIQUE: row_count >= 5, no missing, distinct_count == row_count
-    - HIGH: row_count >= 10 and distinct/non_null >= 0.90
+    - HIGH: row_count >= 50 and distinct/non_null >= 0.90
     - LOW: row_count >= 10 and distinct/non_null <= 0.10, or distinct_count <= 8
       when row_count >= 20
     - MEDIUM: otherwise
@@ -90,7 +90,7 @@ def classify_cardinality(
     if non_null_count <= 0:
         return "CONSTANT"
     ratio = distinct_count / non_null_count
-    if row_count >= 10 and ratio >= 0.90:
+    if row_count >= 50 and ratio >= 0.90:
         return "HIGH"
     if row_count >= 10 and ratio <= 0.10:
         return "LOW"

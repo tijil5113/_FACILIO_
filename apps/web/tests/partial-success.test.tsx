@@ -48,10 +48,12 @@ test("output analysis failure is partial success, not cleanup failure", () => {
   );
   expect(screen.getByRole("heading", { name: "Cleanup complete" })).toBeInTheDocument();
   expect(
-    screen.getByText(/cleaned version was created successfully/i),
+    screen.getByText(
+      /V2 was created successfully, but FACILIO could not analyze the cleaned version/i,
+    ),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/couldn't finish analyzing the new version/i),
+    screen.getByText(/Quality comparison is unavailable until analysis succeeds/i),
   ).toBeInTheDocument();
   expect(screen.queryByText(/this cleanup couldn't finish/i)).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Try analysis again" })).toBeInTheDocument();

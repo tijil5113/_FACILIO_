@@ -14,7 +14,6 @@ from facilio.jobs import state
 from facilio.jobs.queue import MemoryJobQueue
 from facilio.models.job import Job
 from facilio.services.job_executor import JobExecutor
-from facilio.services.jobs import JobService
 from tests.conftest import make_settings
 
 CUSTOMERS = (
@@ -374,16 +373,59 @@ def test_jobs_list_filters_and_missing_job(tmp_path: Path) -> None:
     assert health.get_json()["data"]["queue"]["backend"] == "memory"
 
 
-def test_job_service_page_bounds(tmp_path: Path) -> None:
+def test_job_service_rejects_invalid_page(tmp_path: Path) -> None:
     client, _app = _client(tmp_path)
+    from facilio.core.errors import AppError
+    from facilio.services.jobs import JobService
+
     service = JobService(
         client.application.config["FACILIO_SETTINGS"],
         client.application.extensions["database"],
         client.application.extensions["job_queue"],
     )
-    payload = service.list_jobs(page=0, page_size=1000)
-    assert payload.page == 1
-    assert payload.page_size == 100
+    try:
+        service.list_jobs(page=0, page_size=20)
+    except AppError as error:
+        assert error.status_code == 422
+        assert error.code == "VALIDATION_ERROR"
+    else:
+        raise AssertionError("expected invalid page to fail")
+    listed = client.get("/api/v1/jobs?page=0")
+    assert listed.status_code == 422
+
+
+def test_orphan_queued_job_is_failed_without_duplicate_output(tmp_path: Path) -> None:
+    client, app = _client(tmp_path)
+    workflow_id = _cleanup(client)
+    uploaded = _upload(client)
+    response = client.post(
+        f"/api/v1/workflows/{workflow_id}/runs",
+        json={
+            "dataset_id": uploaded.get_json()["data"]["id"],
+            "version_id": uploaded.get_json()["data"]["current_version_id"],
+        },
+    )
+    job_id = response.get_json()["data"]["job"]["id"]
+    queue: MemoryJobQueue = app.extensions["job_queue"]
+    queue.items.clear()
+    stale = datetime.now(UTC) - timedelta(minutes=10)
+    with app.extensions["database"].session_scope() as session:
+        job = session.get(Job, __import__("uuid").UUID(job_id))
+        assert job is not None
+        job.queued_at = stale
+    recovered = client.post("/api/v1/operations/recover")
+    assert recovered.status_code == 200
+    assert recovered.get_json()["data"]["recovered"] == 1
+    job = client.get(f"/api/v1/jobs/{job_id}").get_json()["data"]
+    assert job["status"] == "FAILED"
+    assert job["error_code"] == "QUEUE_ORPHAN"
+    assert job["retryable"] is True
+    versions = client.get(
+        f"/api/v1/datasets/{uploaded.get_json()['data']['id']}/versions"
+    ).get_json()["data"]
+    assert len(versions) == 1
+    recovered_again = client.post("/api/v1/operations/recover")
+    assert recovered_again.get_json()["data"]["recovered"] == 0
 
 
 def test_process_job_and_task_entry(tmp_path: Path, monkeypatch) -> None:
@@ -421,7 +463,9 @@ def test_classify_and_retryability() -> None:
     assert classify.classify("CAST_FAILED") == classify.DATA
     assert classify.classify("WORKER_LOST") == classify.WORKER
     assert classify.classify("QUEUE_DISPATCH_FAILED") == classify.INFRASTRUCTURE
+    assert classify.classify("QUEUE_ORPHAN") == classify.INFRASTRUCTURE
     assert classify.is_retryable("WORKER_LOST") is True
+    assert classify.is_retryable("QUEUE_ORPHAN") is True
     assert classify.is_retryable("CAST_FAILED") is False
     assert classify.is_retryable(None) is False
 
@@ -436,6 +480,7 @@ def test_redis_queue_ping_and_enqueue_failure(monkeypatch) -> None:
     class FakeQueue:
         def __init__(self, *_args, **_kwargs):
             self.count = 2
+            self.jobs = []
 
         def enqueue(self, *_args, **_kwargs):
             raise ConnectionError("down")
@@ -468,3 +513,21 @@ def test_worker_main_requires_redis(monkeypatch) -> None:
         ),
     )
     assert main(["work"]) == 2
+
+
+def test_heartbeat_loop_beats_more_than_once_then_stops() -> None:
+    from facilio.worker.heartbeat import HeartbeatLoop
+
+    loop = HeartbeatLoop(999, lambda: None)
+    waits = [False, False, True]
+
+    def fake_wait(_timeout):
+        return waits.pop(0) if waits else True
+
+    loop._stop.wait = fake_wait  # type: ignore[method-assign]
+    loop._run()
+    assert loop.beats == 3
+    frozen = loop.beats
+    loop.stop()
+    assert loop.beats == frozen
+    assert loop._thread is None

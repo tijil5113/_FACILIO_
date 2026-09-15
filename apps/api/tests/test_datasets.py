@@ -186,6 +186,10 @@ def test_list_and_pagination(client) -> None:
     assert body["max_upload_size_mb"] == 1
     page2 = client.get("/api/v1/datasets?page=2&page_size=2")
     assert len(page2.get_json()["data"]["items"]) == 1
+    invalid = client.get("/api/v1/datasets?page=0")
+    assert invalid.status_code == 422
+    too_large = client.get("/api/v1/datasets?page_size=500")
+    assert too_large.status_code == 422
 
 
 def test_get_dataset_and_missing(client) -> None:

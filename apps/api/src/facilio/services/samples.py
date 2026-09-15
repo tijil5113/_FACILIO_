@@ -54,7 +54,7 @@ class SampleService:
         self._database = database
         self._datasets = DatasetService(settings, database)
 
-    def import_sample(self, sample_id: str) -> DatasetDetail:
+    def import_sample(self, sample_id: str) -> tuple[DatasetDetail, bool]:
         spec = ALLOWED_SAMPLES.get(sample_id)
         if spec is None:
             raise AppError(
@@ -69,7 +69,7 @@ class SampleService:
                 existing.id,
                 spec.sample_key,
             )
-            return existing
+            return existing, False
         path = bundled_sample_path(spec.filename)
         data = path.read_bytes()
         upload = FileStorage(
@@ -92,14 +92,14 @@ class SampleService:
                     reused.id,
                     spec.sample_key,
                 )
-                return reused
+                return reused, False
             raise
         logger.info(
             "sample imported dataset_id=%s sample_key=%s",
             created.id,
             spec.sample_key,
         )
-        return created
+        return created, True
 
 
 def bundled_sample_path(filename: str) -> Path:

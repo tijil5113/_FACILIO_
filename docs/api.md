@@ -62,3 +62,13 @@ Not ready:
 ```
 
 Database check values: `ready`, `not_configured`, `unavailable`.
+
+When `REDIS_URL` is set, readiness also includes a `queue` check. Redis down makes readiness `not_ready`. An unset `REDIS_URL` is `not_configured` and does not fail readiness (tests and Guided Cleanup).
+
+Worker availability is **not** part of `/health` or `/readiness`. Use `GET /api/v1/operations/health`. CompactHealth is `Limited` when the worker or queue is down.
+
+Invalid collection pagination (`page < 1` or `page_size` outside 1–100) returns HTTP 422.
+
+`POST /api/v1/samples/customers/import` returns 201 when the sample is created and 200 when the existing sample is reused.
+
+`POST /api/v1/workflows/{id}/runs` returns 202 and a Job. It does not execute pandas in the request.

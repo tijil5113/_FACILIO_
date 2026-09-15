@@ -1,35 +1,28 @@
-import { StatusIndicator, type StatusTone } from "@/components/ui/StatusIndicator";
+import { StatusIndicator } from "@/components/ui/StatusIndicator";
+import { useOperationsHealthQuery } from "@/features/jobs/queries";
+import { compactHealthFromChecks } from "@/features/system-health/compact-health";
 import { useHealthQuery, useReadinessQuery } from "@/hooks/use-system-status";
 
 export function CompactHealth() {
   const health = useHealthQuery();
   const readiness = useReadinessQuery();
-
-  let label = "Checking";
-  let tone: StatusTone = "info";
-
-  if (health.isError) {
-    label = "Unavailable";
-    tone = "danger";
-  } else if (
-    health.isSuccess &&
-    readiness.data?.checks.database?.status === "unavailable"
-  ) {
-    label = "Degraded";
-    tone = "warning";
-  } else if (health.isSuccess) {
-    label = "Healthy";
-    tone = "success";
-  }
+  const operations = useOperationsHealthQuery();
+  const presentation = compactHealthFromChecks({
+    healthError: health.isError,
+    healthSuccess: health.isSuccess,
+    databaseStatus: readiness.data?.checks.database?.status,
+    queueStatus: operations.data?.queue.status,
+    workerStatus: operations.data?.worker.status,
+  });
 
   return (
-    <div className="flex items-center" title="Live system status from the FACILIO API">
+    <div className="flex items-center" title={presentation.detail}>
       <StatusIndicator
-        label={label}
-        tone={tone}
+        label={presentation.label}
+        tone={presentation.tone}
         compact
-        pulse={label === "Checking"}
-        description="Live system status from the FACILIO API"
+        pulse={presentation.label === "Checking"}
+        description={presentation.detail}
       />
     </div>
   );

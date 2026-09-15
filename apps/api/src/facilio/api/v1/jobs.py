@@ -19,8 +19,12 @@ def _service() -> JobService:
 def register(blueprint: Blueprint) -> None:
     @blueprint.get("/jobs")
     def list_jobs():
-        page = request.args.get("page", default=1, type=int) or 1
-        page_size = request.args.get("page_size", default=20, type=int) or 20
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("page_size", default=20, type=int)
+        if page is None:
+            page = 1
+        if page_size is None:
+            page_size = 20
         payload = _service().list_jobs(
             page=page,
             page_size=page_size,

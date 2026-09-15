@@ -11,12 +11,26 @@ export function classifyHome(args: {
   datasetsFailed: boolean;
   apiDown: boolean;
   items: DatasetSummary[] | undefined;
+  userDatasetCount?: number;
+  sampleDatasetCount?: number;
 }): HomeKind {
   if (args.apiDown || args.datasetsFailed) {
     return "degraded";
   }
-  if (args.datasetsPending && args.items === undefined) {
+  if (args.datasetsPending && args.items === undefined && args.userDatasetCount == null) {
     return "loading";
+  }
+  if (args.userDatasetCount != null) {
+    if (args.userDatasetCount > 0) {
+      return "returning";
+    }
+    if ((args.sampleDatasetCount ?? 0) > 0) {
+      return "sample-only";
+    }
+    if (args.datasetsPending && args.sampleDatasetCount == null) {
+      return "loading";
+    }
+    return "empty";
   }
   const items = args.items ?? [];
   if (items.length === 0) {

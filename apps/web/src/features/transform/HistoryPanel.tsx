@@ -91,9 +91,9 @@ export function HistoryPanel({
                   </span>
                   <span className="mt-1 block text-sm text-ink-secondary">
                     {version.created_by_workflow_run_id && version.workflow_name
-                      ? `Created by workflow ${version.workflow_name}${
+                      ? `Created by cleanup ${version.workflow_name}${
                           version.workflow_revision != null
-                            ? ` · Revision ${String(version.workflow_revision)}`
+                            ? ` · revision ${String(version.workflow_revision)}`
                             : ""
                         }`
                       : (node.transformation?.summary ?? version.label)}

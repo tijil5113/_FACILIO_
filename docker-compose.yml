@@ -37,11 +37,13 @@ services:
       SECRET_KEY: ${SECRET_KEY:-replace-with-a-long-random-string}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-facilio}:${POSTGRES_PASSWORD:-facilio_dev}@db:5432/${POSTGRES_DB:-facilio}
       REDIS_URL: redis://redis:6379/0
-      JOB_QUEUE_NAME: workflows
+      JOB_QUEUE_NAME: ${JOB_QUEUE_NAME:-workflows}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       UPLOAD_ROOT: /app/runtime/uploads
       MAX_JOB_ATTEMPTS: ${MAX_JOB_ATTEMPTS:-3}
       JOB_STALE_SECONDS: ${JOB_STALE_SECONDS:-90}
+      WORKER_HEARTBEAT_SECONDS: ${WORKER_HEARTBEAT_SECONDS:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
     volumes:
       - facilio_uploads:/app/runtime/uploads
     depends_on:
@@ -59,16 +61,17 @@ services:
       APP_ENV: ${APP_ENV:-development}
       SECRET_KEY: ${SECRET_KEY:-replace-with-a-long-random-string}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-facilio}:${POSTGRES_PASSWORD:-facilio_dev}@db:5432/${POSTGRES_DB:-facilio}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      REDIS_URL: redis://redis:6379/0
+      JOB_QUEUE_NAME: ${JOB_QUEUE_NAME:-workflows}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      UPLOAD_ROOT: /app/runtime/uploads
+      MAX_JOB_ATTEMPTS: ${MAX_JOB_ATTEMPTS:-3}
+      JOB_STALE_SECONDS: ${JOB_STALE_SECONDS:-90}
+      WORKER_HEARTBEAT_SECONDS: ${WORKER_HEARTBEAT_SECONDS:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
       MAX_CONTENT_LENGTH: ${MAX_CONTENT_LENGTH:-18874368}
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-16}
       PREVIEW_MAX_ROWS: ${PREVIEW_MAX_ROWS:-100}
-      UPLOAD_ROOT: /app/runtime/uploads
-      REDIS_URL: redis://redis:6379/0
-      JOB_QUEUE_NAME: workflows
-      MAX_JOB_ATTEMPTS: ${MAX_JOB_ATTEMPTS:-3}
-      JOB_STALE_SECONDS: ${JOB_STALE_SECONDS:-90}
     ports:
       - "5050:5000"
     volumes:
@@ -94,13 +97,12 @@ services:
   web:
     build:
       context: ./apps/web
-    environment:
-      VITE_API_BASE_URL: ""
-      VITE_PROXY_TARGET: http://api:5000
+      dockerfile: Dockerfile
     ports:
-      - "5173:5173"
+      - "8080:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

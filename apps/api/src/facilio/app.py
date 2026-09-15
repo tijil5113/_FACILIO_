@@ -6,7 +6,7 @@ from flask import Flask, request
 from flask_cors import CORS
 
 from facilio.api.v1 import v1_bp
-from facilio.core.config import Settings, get_settings
+from facilio.core.config import Settings, get_settings, repository_root
 from facilio.core.errors_handlers import register_error_handlers
 from facilio.core.logging import configure_logging, get_logger
 from facilio.core.request_id import register_request_id
@@ -35,10 +35,22 @@ def create_app(settings: Settings | None = None) -> Flask:
     _register_blueprints(app)
     _register_request_logging(app)
 
+    competing = repository_root() / "apps" / "api" / ".env"
+    if competing.is_file() and not resolved.is_testing():
+        logger.warning(
+            "Ignoring apps/api/.env; FACILIO loads only the repository-root .env"
+        )
+    if resolved.database_backend() == "SQLite" and resolved.APP_ENV == "development":
+        logger.warning(
+            "Database backend: SQLite. Standard local development uses PostgreSQL."
+        )
+    else:
+        logger.info("Database backend: %s", resolved.database_backend())
     logger.info(
-        "FACILIO API initialized (env=%s, version=%s)",
+        "FACILIO API initialized (env=%s, version=%s, database=%s)",
         resolved.APP_ENV,
         resolved.APP_VERSION,
+        resolved.database_identity(),
     )
     return app
 

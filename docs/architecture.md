@@ -1,6 +1,6 @@
 # Architecture
 
-Phase 1 defined engineering boundaries. Phase 2 added the product shell. Phase 3 added universal dataset ingestion. Phase 4 added deterministic profiling and data quality. Phase 5 added immutable dataset versions and a Flask-independent transformation engine. Phase 6 added reusable linear workflows. Phase 7 executes those workflows asynchronously (Redis/RQ worker). Scheduling, DAG graphs, AI, and exports are not implemented.
+FACILIO is a local data-operations workspace: ingest, profile, clean, and version tabular data. Scheduling, DAG graphs, AI, authentication, and exports are not implemented.
 
 ## Backend
 
@@ -15,9 +15,11 @@ The Flask application is created by `facilio.app.create_app`.
 | `storage` | Managed source and derived-file storage |
 | `models` | SQLAlchemy entities |
 | `db` | Engine, session factory, declarative base |
-| `jobs` / `worker` | Queue adapter, worker process, RQ tasks |
+| `jobs` / `worker` | Queue adapter, periodic heartbeat, RQ tasks |
 
-Health does not import pandas. Dataset, profile, and transformation routes do not parse files in the view layer; services call `facilio_processing`. Public **Run** dispatches a job; the worker calls Phase 6 `execute_pipeline`.
+Health (`GET /api/v1/health`) does not import pandas and does not prove the worker is running. Readiness probes the database and Redis when `REDIS_URL` is set. CompactHealth also uses `GET /api/v1/operations/health` (queue + worker heartbeat).
+
+Public **saved Cleanup Run** dispatches a job; the worker calls the same pipeline as Guided Cleanup. Guided **Apply** executes that pipeline inside the API request.
 
 Details: [jobs.md](jobs.md).
 
@@ -60,16 +62,18 @@ Details: [transformations.md](transformations.md).
 ## Workflow flow
 
 ```text
-Workflow definition (ordered steps)
+Saved Cleanup (ordered steps)
   → WorkflowService
   → sequential schema validation (processing)
   → WorkflowService.dispatch_run (Job + WorkflowRun QUEUED)
   → Redis/RQ payload: job_id
   → worker claims Job
-  → execute_pipeline → apply_transformation (Phase 5)
+  → execute_pipeline → apply_transformation
   → one derived DatasetVersion (success only)
   → WorkflowRun + Job + JobAttempt finalized
 ```
+
+Guided Cleanup apply uses the same executor **inside the API process** (no Redis required). Saved Cleanup **Run** is asynchronous and requires Redis plus a worker.
 
 Details: [workflows.md](workflows.md).
 
@@ -113,4 +117,4 @@ Tests use SQLite files in a temporary directory and a temporary upload root. The
 
 ## Dataset lifecycle
 
-`pending` / `processing` exist on the dataset model for later async jobs. Phase 3 creates `ready` datasets after a successful parse. Profile status is per **version** on `dataset_profiles`. Transformation apply and workflow runs are synchronous because uploads remain size-bounded. Workflow runs are not queued jobs.
+`pending` / `processing` exist on the dataset model. Successful ingestion creates `ready` datasets. Profile status is per **version**. Guided Cleanup apply is in-request. Saved Cleanup runs are queued jobs.

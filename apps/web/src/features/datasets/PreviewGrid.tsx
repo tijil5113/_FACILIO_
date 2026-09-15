@@ -41,7 +41,7 @@ export function PreviewGrid({ preview }: PreviewGridProps) {
                   <span className="block max-w-[14rem] truncate">
                     {column.name || "(blank)"}
                   </span>
-                  <span className="font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                  <span className="text-[10px] tracking-wide text-ink-muted uppercase">
                     {column.dtype}
                   </span>
                 </th>

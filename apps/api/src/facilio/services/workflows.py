@@ -21,6 +21,7 @@ from facilio.core.errors import (
     WorkflowStepNotFoundError,
 )
 from facilio.core.logging import get_logger
+from facilio.core.pagination import parse_page
 from facilio.core.request_id import get_request_id
 from facilio.db.session import Database
 from facilio.jobs import classify, state
@@ -89,7 +90,7 @@ class WorkflowService:
     def list_workflows(
         self, *, page: int, page_size: int, include_archived: bool = False
     ) -> WorkflowListData:
-        page, page_size = _page(page, page_size)
+        page, page_size = parse_page(page, page_size)
         with self._database.session_scope() as session:
             items, total = WorkflowRepository(session).list_page(
                 page=page, page_size=page_size, include_archived=include_archived
@@ -624,7 +625,7 @@ class WorkflowService:
         dataset_id: str | None = None,
         status: str | None = None,
     ) -> WorkflowRunListData:
-        page, page_size = _page(page, page_size)
+        page, page_size = parse_page(page, page_size)
         wf = _parse_workflow(workflow_id) if workflow_id else None
         ds = _parse_dataset(dataset_id) if dataset_id else None
         if status is not None and status not in {
@@ -694,6 +695,11 @@ class WorkflowService:
             from facilio.repositories.job import JobRepository
 
             jobs = JobRepository(session)
+            datasets_repo = DatasetRepository(session)
+            sample_count = datasets_repo.count_samples()
+            recent_rows = datasets_repo.list_recent_for_home(limit=5)
+            from facilio.services.datasets import _to_summary
+
             return WorkspaceStatsData(
                 datasets=datasets,
                 derived_versions=derived,
@@ -706,6 +712,9 @@ class WorkflowService:
                 queued_job_count=jobs.count_by_status(job_state.QUEUED),
                 running_job_count=jobs.count_by_status(job_state.RUNNING),
                 failed_job_count=jobs.count_by_status(job_state.FAILED),
+                user_dataset_count=max(0, datasets - sample_count),
+                sample_dataset_count=sample_count,
+                recent_datasets=[_to_summary(item) for item in recent_rows],
             )
 
     def _require_input(self, session, dataset_id: uuid.UUID, version_id: uuid.UUID):
@@ -1137,12 +1146,6 @@ def _parse_dataset(value: str) -> uuid.UUID:
         return uuid.UUID(str(value))
     except ValueError:
         raise DatasetNotFoundError from None
-
-
-def _page(page: int, page_size: int) -> tuple[int, int]:
-    safe_page = max(1, page)
-    safe_size = min(100, max(1, page_size))
-    return safe_page, safe_size
 
 
 def _clean_description(value: str | None) -> str | None:

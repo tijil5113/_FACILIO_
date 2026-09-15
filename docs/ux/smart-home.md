@@ -56,4 +56,4 @@ Returning Home: datasets list (includes `profile_status`, `issue_count`, version
 - `issue_count` is the current version’s profile issue total when analyzed; it is not a live subscription.
 - Needs attention uses that list field and is limited to the first page of datasets (20).
 - Reset sample is not implemented.
-- Guided cleanup (Phase 8C), Learn (8D), full Help (8E), and motion (8F) are out of scope.
+- Guided cleanup, Learn, Help, and motion are part of the shipped product.

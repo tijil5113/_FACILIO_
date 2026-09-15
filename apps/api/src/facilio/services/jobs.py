@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from facilio.core.config import Settings
 from facilio.core.errors import AppError, JobNotFoundError
 from facilio.core.logging import get_logger
+from facilio.core.pagination import parse_page
 from facilio.db.session import Database
 from facilio.jobs import classify, state
 from facilio.jobs.queue import JobQueue
@@ -56,7 +57,7 @@ class JobService:
         dataset_id: str | None = None,
         search: str | None = None,
     ) -> JobListData:
-        page, page_size = _page(page, page_size)
+        page, page_size = parse_page(page, page_size)
         if status is not None and status not in _STATUSES:
             raise AppError("VALIDATION_ERROR", "Unknown job status.", status_code=422)
         if job_type is not None and job_type != "WORKFLOW_RUN":
@@ -252,13 +253,63 @@ class JobService:
             )
 
     def recover_stale(self) -> int:
-        return JobExecutor(self._settings, self._database).recover_stale()
+        recovered = JobExecutor(self._settings, self._database).recover_stale()
+        recovered += self._promote_output_as_success()
+        recovered += self._fail_orphan_queued()
+        return recovered
+
+    def _promote_output_as_success(self) -> int:
+        promoted = 0
+        executor = JobExecutor(self._settings, self._database)
+        with self._database.session_scope() as session:
+            for job in JobRepository(session).failed_with_output():
+                run = WorkflowRunRepository(session).get(job.workflow_run_id)
+                if run is None or run.output_version_id is None:
+                    continue
+                executor._mark_success_locked(session, job, run)
+                promoted += 1
+                logger.info("job promoted after durable output job_id=%s", job.id)
+        return promoted
+
+    def _fail_orphan_queued(self) -> int:
+        if self._settings.REDIS_URL and not self._queue.ping():
+            return 0
+        threshold = datetime.now(UTC) - timedelta(
+            seconds=self._settings.JOB_STALE_SECONDS
+        )
+        failed = 0
+        now = datetime.now(UTC)
+        with self._database.session_scope() as session:
+            for job in JobRepository(session).stale_queued(threshold):
+                if self._queue.contains(str(job.id)):
+                    continue
+                job.status = state.FAILED
+                job.completed_at = now
+                job.error_code = "QUEUE_ORPHAN"
+                job.error_message_safe = (
+                    "This cleanup never reached a worker. "
+                    "Your original data is unchanged."
+                )
+                job.error_category = classify.INFRASTRUCTURE
+                job.retryable = True
+                job.current_activity = None
+                JobRepository(session).save(job)
+                run = WorkflowRunRepository(session).get(job.workflow_run_id)
+                if run is not None and run.output_version_id is None:
+                    run.status = "FAILED"
+                    run.completed_at = now
+                    run.error_code = "QUEUE_ORPHAN"
+                    run.error_message_safe = job.error_message_safe
+                failed += 1
+                logger.info("orphan queued job failed job_id=%s", job.id)
+        return failed
 
     def _to_summary(self, session, job: Job) -> JobSummary:
         workflow_name = None
         dataset_name = None
         input_number = None
         output_number = None
+        output_profile_status = None
         if job.workflow_id:
             workflow = WorkflowRepository(session).get(job.workflow_id)
             if workflow is not None:
@@ -276,6 +327,7 @@ class JobService:
             version = versions.get(job.output_version_id)
             if version is not None:
                 output_number = version.version_number
+                output_profile_status = version.profile_status
         if workflow_name is None and job.workflow_run is not None:
             workflow_name = str(
                 job.workflow_run.workflow_snapshot.get("name") or "Workflow"
@@ -296,6 +348,7 @@ class JobService:
             input_version_number=input_number,
             output_version_id=job.output_version_id,
             output_version_number=output_number,
+            output_profile_status=output_profile_status,
             queue_name=job.queue_name,
             attempt_count=job.attempt_count,
             max_attempts=job.max_attempts,
@@ -403,10 +456,6 @@ def _delta_ms(start: datetime | None, end: datetime | None) -> int | None:
     if start is None or end is None:
         return None
     return max(0, int((_aware(end) - _aware(start)).total_seconds() * 1000))
-
-
-def _page(page: int, page_size: int) -> tuple[int, int]:
-    return max(1, page), min(100, max(1, page_size))
 
 
 def _parse_job(value: str) -> uuid.UUID:

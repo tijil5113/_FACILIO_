@@ -9,6 +9,7 @@ import { StatusIndicator } from "@/components/ui/StatusIndicator";
 import { useJobsQuery } from "@/features/jobs/queries";
 import { FirstUseCue } from "@/features/onboarding/FirstUseCue";
 import { LearnMoreLink } from "@/features/learn/LearnMoreLink";
+import { activityResultLabel } from "@/lib/activity-outcome";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { jobStatusLabel } from "@/lib/status-labels";
 import type { JobStatus, JobSummary } from "@/types/jobs";
@@ -152,7 +153,7 @@ export function JobsPage() {
                         : formatDateTime(item.queued_at)}
                     </td>
                     <td data-label="Result" className="px-4 py-3 text-ink-secondary">
-                      {jobResult(item)}
+                      {activityResultLabel(item)}
                     </td>
                   </tr>
                 ))
@@ -163,21 +164,6 @@ export function JobsPage() {
       )}
     </div>
   );
-}
-
-function jobResult(item: JobSummary): string {
-  if (item.status === "SUCCEEDED") {
-    return item.output_version_number
-      ? `V${String(item.output_version_number)} created`
-      : "Done";
-  }
-  if (item.status === "FAILED") {
-    return "No new version";
-  }
-  if (item.status === "CANCELLED") {
-    return "Stopped";
-  }
-  return "—";
 }
 
 function ActivityStatus({ item }: { item: JobSummary }) {

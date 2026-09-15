@@ -14,6 +14,10 @@ import {
   useJobQuery,
   useRetryJobMutation,
 } from "@/features/jobs/queries";
+import {
+  activityAnalysisNeedsAttention,
+  activityHasOutput,
+} from "@/lib/activity-outcome";
 import { formatDateTime, formatDuration, formatScore } from "@/lib/format";
 import { jobStatusLabel } from "@/lib/status-labels";
 import { operationDisplayName } from "@/lib/operation-labels";
@@ -87,12 +91,22 @@ export function JobDetailPage() {
         <span className="text-xs text-ink-muted">{job.progress.label}</span>
       </div>
       <div className="flex flex-wrap gap-2">
-        {job.status === "SUCCEEDED" && job.output_version_id && job.dataset_id ? (
+        {activityHasOutput(job) && job.dataset_id ? (
           <Link
             className="inline-flex h-9 items-center rounded-[var(--facilio-radius-md)] border border-ink bg-ink px-3 text-sm font-medium text-canvas dark:text-[#121410]"
-            to={`/datasets/${job.dataset_id}?version=${job.output_version_id}`}
+            to={`/datasets/${job.dataset_id}?version=${job.output_version_id ?? ""}`}
           >
             Open cleaned version
+          </Link>
+        ) : null}
+        {activityAnalysisNeedsAttention(job) &&
+        job.dataset_id &&
+        job.output_version_id ? (
+          <Link
+            className="inline-flex h-9 items-center rounded-[var(--facilio-radius-md)] border border-line px-3 text-sm"
+            to={`/datasets/${job.dataset_id}?version=${job.output_version_id}&analyze=1`}
+          >
+            Retry analysis
           </Link>
         ) : null}
         {canCancel ? (
@@ -111,7 +125,7 @@ export function JobDetailPage() {
             Cancel
           </Button>
         ) : null}
-        {job.status === "FAILED" && job.retryable ? (
+        {job.status === "FAILED" && job.retryable && !job.output_version_id ? (
           <Button
             onClick={() => {
               retry.mutate();
@@ -156,21 +170,19 @@ export function JobDetailPage() {
           No cleaned version was created. Your input version is unchanged.
         </Callout>
       ) : null}
-      {job.status === "FAILED" ? (
+      {job.status === "FAILED" && !job.output_version_id ? (
         <RecoveryMessage
           experience={{
             title: "Cleanup couldn't finish",
             explanation:
               job.error_message_safe ??
               "The cleanup failed before creating a new version.",
-            consequence: job.output_version_id
-              ? "Check the result below."
-              : "No cleaned output was confirmed. Your original is unchanged.",
+            consequence: "No cleaned output was confirmed. Your original is unchanged.",
             severity: "error",
             retrySafe: job.retryable,
             action: "Run cleanup",
             resourceId: job.id,
-            dataSafety: job.output_version_id ? "unknown" : "not-created",
+            dataSafety: "not-created",
             code: job.error_code ?? undefined,
           }}
           extraDetails={[
@@ -183,7 +195,7 @@ export function JobDetailPage() {
           ]}
           actions={
             <div className="flex flex-wrap gap-2">
-              {job.retryable ? (
+              {job.retryable && !job.output_version_id ? (
                 <Button
                   size="sm"
                   onClick={() => {
@@ -214,16 +226,33 @@ export function JobDetailPage() {
           }
         />
       ) : null}
-      {job.status === "SUCCEEDED" ? (
-        <Callout tone="success" title="Cleanup finished">
+      {job.status === "SUCCEEDED" || job.output_version_id ? (
+        <Callout
+          tone={activityAnalysisNeedsAttention(job) ? "warning" : "success"}
+          title={
+            activityAnalysisNeedsAttention(job)
+              ? "Cleanup finished · analysis needs attention"
+              : "Cleanup finished"
+          }
+        >
           <p>
             Cleaned version V{job.output_version_number ?? "—"}
             {job.rows_before != null && job.rows_after != null
               ? ` · rows ${String(job.rows_before)} → ${String(job.rows_after)}`
               : ""}
-            {` · quality ${formatScore(job.quality_before)} → ${formatScore(job.quality_after)}`}
+            {job.quality_before != null || job.quality_after != null
+              ? ` · quality ${formatScore(job.quality_before)} → ${formatScore(job.quality_after)}`
+              : ""}
           </p>
-          <p className="mt-1">The original version was not overwritten.</p>
+          {activityAnalysisNeedsAttention(job) ? (
+            <p className="mt-1">
+              V{job.output_version_number ?? ""} was created successfully, but FACILIO
+              could not analyze the cleaned version. The original version was not
+              overwritten.
+            </p>
+          ) : (
+            <p className="mt-1">The original version was not overwritten.</p>
+          )}
         </Callout>
       ) : null}
 

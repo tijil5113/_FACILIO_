@@ -80,3 +80,41 @@ def test_development_allows_empty_database_url() -> None:
     )
     assert settings.DATABASE_URL == ""
     assert settings.is_production() is False
+
+
+def test_database_identity_omits_credentials() -> None:
+    settings = Settings(
+        APP_ENV="development",
+        SECRET_KEY="dev-key",
+        DATABASE_URL="postgresql+psycopg://facilio:secret-password@localhost:5432/facilio",
+    )
+    assert settings.database_backend() == "PostgreSQL"
+    identity = settings.database_identity()
+    assert "secret-password" not in identity
+    assert "facilio" in identity
+    assert identity == "postgresql://localhost:5432/facilio"
+
+
+def test_development_rejects_sqlite_when_root_env_is_postgres(monkeypatch) -> None:
+    from facilio.core import config as config_mod
+
+    monkeypatch.setattr(
+        config_mod, "_env_file_database_backend", lambda _path: "PostgreSQL"
+    )
+    with pytest.raises(
+        ValidationError, match=r"repository-root \.env specifies PostgreSQL"
+    ):
+        Settings(
+            APP_ENV="development",
+            SECRET_KEY="dev-key",
+            DATABASE_URL="sqlite:///facilio.db",
+        )
+
+
+def test_canonical_env_file_is_repository_root() -> None:
+    from facilio.core.config import canonical_env_file, repository_root
+
+    env_file = canonical_env_file()
+    assert env_file == repository_root() / ".env"
+    assert env_file.parent == repository_root()
+    assert "apps/api" not in str(env_file)

@@ -17,6 +17,7 @@ from facilio.core.config import Settings
 from facilio.core.errors import AppError, DatasetNotFoundError
 from facilio.core.filenames import display_stem, original_filename
 from facilio.core.logging import get_logger
+from facilio.core.pagination import parse_page
 from facilio.db.session import Database
 from facilio.models.dataset import Dataset
 from facilio.models.staging import StagingUpload
@@ -50,7 +51,7 @@ class DatasetService:
         self._storage = LocalStorageService(settings.upload_root_path())
 
     def list_datasets(self, *, page: int, page_size: int) -> DatasetListData:
-        page, page_size = _pagination(page, page_size)
+        page, page_size = parse_page(page, page_size)
         with self._database.session_scope() as session:
             items, total = DatasetRepository(session).list_page(
                 page=page, page_size=page_size
@@ -463,12 +464,6 @@ def _parse_id(value: str, *, code: str = "DATASET_NOT_FOUND") -> uuid.UUID:
         if code == "DATASET_NOT_FOUND":
             raise DatasetNotFoundError from None
         raise AppError(code, "The identifier is not valid.", status_code=400) from None
-
-
-def _pagination(page: int, page_size: int) -> tuple[int, int]:
-    safe_page = max(page, 1)
-    safe_size = min(max(page_size, 1), 100)
-    return safe_page, safe_size
 
 
 def _unique_name(existing: set[str], base: str) -> str:

@@ -1,10 +1,12 @@
 # Jobs
 
-Phase 7 moves **public workflow execution** out of the HTTP request and into a real asynchronous job architecture.
+Saved Cleanup **Run** is asynchronous. Guided Cleanup **Apply** uses the same executor inside the API request.
 
-## Why leave HTTP?
+## Why leave HTTP for saved Cleanups?
 
-A Flask request is a poor place to run a multi-step pandas pipeline. The client would wait on an open connection, timeouts would look like product failures, and a process restart would lose in-flight work with no durable record. FACILIO now **persists first**, enqueues a `job_id`, and returns **202 Accepted**.
+A Flask request is a poor place to run a multi-step pandas pipeline for a reusable Cleanup the user may leave. The client would wait on an open connection, timeouts would look like product failures, and a process restart would lose in-flight work with no durable record. FACILIO **persists first**, enqueues a `job_id`, and returns **202 Accepted**.
+
+Guided Cleanup is intentionally in-request: the user is present, the step list is short, and the product requires an immediate version result.
 
 ## Redis vs PostgreSQL
 
@@ -37,7 +39,9 @@ Invalid transitions raise `JOB_INVALID_STATE`.
 
 ## Dispatch consistency
 
-The API commits the run and job, then enqueues. If Redis enqueue fails, the job is marked **FAILED** with `QUEUE_DISPATCH_FAILED` (retryable). There is no transactional outbox in Phase 7. The consistency window is: durable QUEUED row, then a best-effort enqueue. Recovery is retry of that failed job.
+The API commits the run and job, then enqueues. If Redis enqueue fails, the job is marked **FAILED** with `QUEUE_DISPATCH_FAILED` (retryable). There is no transactional outbox. The consistency window is: durable QUEUED row, then a best-effort enqueue. Recovery is retry of that failed job.
+
+`QUEUED` rows older than `JOB_STALE_SECONDS` that are not present on the Redis queue are marked **FAILED** with `QUEUE_ORPHAN` (retryable, no output version). Recovery runs at worker startup, on each worker heartbeat, via `python -m facilio.worker recover`, and `POST /api/v1/operations/recover`. If Redis itself is unreachable, orphans are left unchanged so FACILIO does not fail healthy queued work it cannot inspect.
 
 ## Worker
 
@@ -48,7 +52,9 @@ python -m facilio.worker
 python -m facilio.worker recover
 ```
 
-The worker creates a Flask application **without** serving HTTP, claims the job with a row lock (`SELECT … FOR UPDATE`), loads the **WorkflowRun snapshot** (not the latest editable workflow), and calls Phase 6 `execute_pipeline` → Phase 5 `apply_transformation`.
+The worker creates a Flask application **without** serving HTTP, claims the job with a row lock (`SELECT … FOR UPDATE`), loads the **WorkflowRun snapshot** (not the latest editable Cleanup), and calls `execute_pipeline` → `apply_transformation`.
+
+A single `HeartbeatLoop` thread updates worker `last_seen` immediately and then every `WORKER_HEARTBEAT_SECONDS` until shutdown. Heartbeat is not signal-only.
 
 RQ finishes the current job on SIGTERM/SIGINT; FACILIO then marks the worker heartbeat `STOPPING`. Database sessions are opened per unit of work and closed.
 
@@ -77,7 +83,7 @@ Default `MAX_JOB_ATTEMPTS=3`.
 
 ## Worker crash
 
-Workers write `jobs.heartbeat_at` at start, between steps, and during finalization. `POST /api/v1/operations/recover` (and worker startup) marks `RUNNING`/`CANCEL_REQUESTED` rows with a stale heartbeat as **FAILED / WORKER_LOST** unless an output version already exists (then the job is finalized as succeeded). FACILIO does not auto-re-execute a lost in-flight pipeline; the user retries.
+Workers write `jobs.heartbeat_at` at start, between steps, and during finalization. `POST /api/v1/operations/recover` (and worker startup / periodic heartbeat) marks `RUNNING`/`CANCEL_REQUESTED` rows with a stale heartbeat as **FAILED / WORKER_LOST** unless an output version already exists (then the job is finalized as succeeded). Profiling failure after a committed output version does **not** mark the cleanup FAILED: the job is `SUCCEEDED` and the output `profile_status` is `FAILED`. FACILIO does not auto-re-execute a lost in-flight pipeline; the user retries.
 
 ## Polling
 
@@ -91,8 +97,8 @@ Docker Compose runs `postgres`, `redis`, `api`, `worker`, and `web`. API and wor
 
 ## Retention
 
-Completed jobs are **not** deleted in Phase 7. Historical operational records stay in PostgreSQL.
+Completed jobs are **not** deleted. Historical operational records stay in PostgreSQL.
 
 ## Scaling later
 
-Multiple RQ workers can share the `workflows` queue. Safety remains the database claim, not Redis uniqueness. Horizontal scale does not require changing the Phase 6 executor.
+Multiple RQ workers can share the `workflows` queue. Safety remains the database claim, not Redis uniqueness. Horizontal scale is not a current product claim.

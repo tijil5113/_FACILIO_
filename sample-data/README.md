@@ -22,7 +22,9 @@ Fictional identities and `@example.com` addresses only. Scores are never stored 
 | `status` values `active` / `Active` / `ACTIVE` / `Inactive` | `CASE_VARIATION` on `status` |
 | `signup_date` ISO, slash, and long-month strings | `MIXED_DATE_FORMATS` on `signup_date` |
 
-HIGH_CARDINALITY may also appear on identifier-like columns; that is a real profiler observation, not a scripted demo claim.
+Fictional identities and `@example.com` addresses only. Scores are never stored in this file; they come from the profiler.
+
+A 20-row sample does not receive `HIGH_CARDINALITY` merely because many values are unique. Identifier-like columns may still be labeled as identifiers.
 
 Try FACILIO: Home → Try FACILIO → `POST /api/v1/samples/customers/import` → real dataset + ORIGINAL V1 → auto-analysis via the existing profile API → Problems.
 

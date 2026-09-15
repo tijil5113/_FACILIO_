@@ -15,6 +15,7 @@ from facilio.core.errors import (
     VersionNotFoundError,
 )
 from facilio.core.logging import get_logger
+from facilio.core.pagination import parse_page
 from facilio.db.session import Database
 from facilio.models.profile import ColumnProfile as ColumnProfileRow
 from facilio.models.profile import DatasetProfile as DatasetProfileRow
@@ -167,7 +168,7 @@ class ProfileService:
         version_id: str | None = None,
     ) -> QualityIssueListData:
         identity = _parse_id(dataset_id)
-        page, page_size = _pagination(page, page_size)
+        page, page_size = parse_page(page, page_size)
         with self._database.session_scope() as session:
             dataset = DatasetRepository(session).get(identity)
             if dataset is None:
@@ -417,7 +418,3 @@ def _parse_id(value: str) -> uuid.UUID:
         return uuid.UUID(str(value))
     except ValueError:
         raise DatasetNotFoundError from None
-
-
-def _pagination(page: int, page_size: int) -> tuple[int, int]:
-    return max(page, 1), min(max(page_size, 1), 100)

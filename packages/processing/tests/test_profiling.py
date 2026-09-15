@@ -199,6 +199,13 @@ def test_cardinality_rules() -> None:
     assert (
         classify_cardinality(row_count=20, non_null_count=20, distinct_count=2) == "LOW"
     )
+    assert (
+        classify_cardinality(row_count=20, non_null_count=20, distinct_count=19)
+        == "MEDIUM"
+    )
+    assert (
+        classify_cardinality(row_count=50, non_null_count=50, distinct_count=48) == "HIGH"
+    )
 
 
 def test_type_inference_conservative() -> None:

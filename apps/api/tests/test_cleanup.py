@@ -410,3 +410,100 @@ def test_sample_guided_cleanup(tmp_path: Path) -> None:
     assert applied.status_code == 201, applied.get_json()
     versions = client.get(f"/api/v1/datasets/{dataset_id}/versions").get_json()["data"]
     assert len(versions) == 2
+
+
+def test_apply_succeeds_when_output_profile_fails(tmp_path: Path, monkeypatch) -> None:
+    client = _client(tmp_path)
+    uploaded = _upload(client, CLEAN_ALICE, "alice.csv")
+    dataset_id = uploaded.get_json()["data"]["id"]
+    version_id = uploaded.get_json()["data"]["current_version_id"]
+    original = client.get(f"/api/v1/datasets/{dataset_id}/preview").get_json()["data"][
+        "rows"
+    ]
+    _ready(client, dataset_id, version_id)
+    from facilio.core.errors import AppError
+    from facilio.services.profiles import ProfileService
+
+    def fail_profile(self, dataset_id: str, version_id: str | None = None):
+        raise AppError("PROFILING_FAILED", "injected profile failure", status_code=500)
+
+    monkeypatch.setattr(ProfileService, "run_profile", fail_profile)
+    steps = [
+        {
+            "operation_code": "NORMALIZE_CASE",
+            "parameters": {"column": "name", "mode": "lowercase"},
+        }
+    ]
+    preview = client.post(
+        f"/api/v1/datasets/{dataset_id}/versions/{version_id}/cleanup-preview",
+        json={"steps": steps},
+    )
+    assert preview.status_code == 200, preview.get_json()
+    applied = client.post(
+        f"/api/v1/datasets/{dataset_id}/versions/{version_id}/cleanup",
+        json={
+            "steps": steps,
+            "plan_fingerprint": preview.get_json()["data"]["plan_fingerprint"],
+        },
+    )
+    assert applied.status_code == 201, applied.get_json()
+    payload = applied.get_json()["data"]
+    assert payload["output_version_number"] == 2
+    assert payload["job"]["status"] == "SUCCEEDED"
+    assert payload["profile_status"] == "FAILED"
+    versions = client.get(f"/api/v1/datasets/{dataset_id}/versions").get_json()["data"]
+    assert len(versions) == 2
+    child = next(item for item in versions if item["version_number"] == 2)
+    parent = next(item for item in versions if item["version_number"] == 1)
+    assert child["profile_status"] == "FAILED"
+    assert parent["profile_status"] == "READY"
+    job = client.get(f"/api/v1/jobs/{payload['job']['id']}").get_json()["data"]
+    assert job["status"] == "SUCCEEDED"
+    assert job["output_version_number"] == 2
+    assert job["output_profile_status"] == "FAILED"
+    still_original = client.get(
+        f"/api/v1/datasets/{dataset_id}/versions/{version_id}/preview"
+    ).get_json()["data"]["rows"]
+    assert still_original == original
+
+
+def test_apply_fails_before_output_creates_no_version(
+    tmp_path: Path, monkeypatch
+) -> None:
+    client = _client(tmp_path)
+    uploaded = _upload(client, CLEAN_ALICE, "alice.csv")
+    dataset_id = uploaded.get_json()["data"]["id"]
+    version_id = uploaded.get_json()["data"]["current_version_id"]
+    _ready(client, dataset_id, version_id)
+    from facilio.core.errors import AppError
+
+    def fail_pipeline(*_args, **_kwargs):
+        raise AppError(
+            "WORKFLOW_EXECUTION_FAILED",
+            "injected transformation failure",
+            status_code=400,
+        )
+
+    monkeypatch.setattr("facilio_processing.workflows.execute_pipeline", fail_pipeline)
+    steps = [
+        {
+            "operation_code": "NORMALIZE_CASE",
+            "parameters": {"column": "name", "mode": "lowercase"},
+        }
+    ]
+    preview = client.post(
+        f"/api/v1/datasets/{dataset_id}/versions/{version_id}/cleanup-preview",
+        json={"steps": steps},
+    )
+    assert preview.status_code == 200, preview.get_json()
+    applied = client.post(
+        f"/api/v1/datasets/{dataset_id}/versions/{version_id}/cleanup",
+        json={
+            "steps": steps,
+            "plan_fingerprint": preview.get_json()["data"]["plan_fingerprint"],
+        },
+    )
+    assert applied.status_code == 400, applied.get_json()
+    versions = client.get(f"/api/v1/datasets/{dataset_id}/versions").get_json()["data"]
+    assert len(versions) == 1
+    assert versions[0]["version_number"] == 1

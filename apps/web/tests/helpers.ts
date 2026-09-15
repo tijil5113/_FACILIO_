@@ -60,6 +60,9 @@ export const emptyWorkspaceStats: WorkspaceStats = {
   queued_job_count: 0,
   running_job_count: 0,
   failed_job_count: 0,
+  user_dataset_count: 0,
+  sample_dataset_count: 0,
+  recent_datasets: [],
 };
 
 export const defaultTransformationCatalog: TransformationDefinition[] = [
@@ -299,9 +302,21 @@ export function mockApi(options: {
       });
     }
     if (pathnameOf(url) === "/api/v1/workspace/summary") {
+      const list =
+        options.datasets && options.datasets !== "error"
+          ? options.datasets
+          : emptyDatasetList;
+      const items = list.items;
+      const sampleCount = items.filter((item) => item.is_sample).length;
       return jsonResponse({
         success: true,
-        data: emptyWorkspaceStats,
+        data: {
+          ...emptyWorkspaceStats,
+          datasets: list.total,
+          user_dataset_count: Math.max(0, list.total - sampleCount),
+          sample_dataset_count: sampleCount,
+          recent_datasets: items.slice(0, 5),
+        },
       });
     }
     if (pathnameOf(url) === "/api/v1/workflows") {
@@ -338,7 +353,11 @@ export function mockApi(options: {
             queued_count: 0,
             name: "workflows",
           },
-          worker: { status: "unavailable", available_count: 0, last_seen_at: null },
+          worker: {
+            status: "available",
+            available_count: 1,
+            last_seen_at: "2026-09-15T12:00:00.000Z",
+          },
           jobs: { queued: 0, running: 0, failed: 0, succeeded: 0 },
         },
       });

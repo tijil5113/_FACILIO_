@@ -2,29 +2,41 @@
 
 ## Native workflow
 
-1. Install Python 3.12 and Node.js 22 or newer.
-2. From the repository root, run `make install`.
-3. Start the API with `make dev-api`.
-4. If running workflows asynchronously, start Redis and `make dev-worker`.
-5. Start the frontend with `make dev-web`.
-6. Open http://127.0.0.1:5173.
+1. Install Python 3.12 and Node.js 22 (see `.nvmrc`; `engines.node` is `>=22`).
+2. Copy `.env.example` to the repository-root `.env`. Do not use `apps/api/.env`.
+3. Create PostgreSQL owned by the app user, then `alembic upgrade head`.
+4. From the repository root, run `make install`.
+5. Start the API with `make dev-api`.
+6. For saved Cleanups, start Redis and `make dev-worker`.
+7. Start the frontend with `make dev-web`.
+8. Open http://127.0.0.1:5173.
 
 The Flask process listens on port 5050 locally to avoid macOS AirPlay Receiver on port 5000.
+
+The API and worker load **only** the repository-root `.env`. Competing `apps/api/.env` files are ignored.
 
 If PostgreSQL is configured, apply migrations before uploading files:
 
 ```bash
 cd apps/api
 source .venv/bin/activate
-export DATABASE_URL=postgresql+psycopg://facilio:facilio_dev@localhost:5432/facilio
 alembic upgrade head
 ```
 
-API tests create isolated SQLite databases and temporary upload directories. They do not require PostgreSQL.
+`DATABASE_URL` must come from the root `.env` or the process environment. API tests create isolated SQLite databases and temporary upload directories. They do not require PostgreSQL.
+
+### PostgreSQL 16 from zero
+
+```sql
+CREATE USER facilio WITH PASSWORD 'choose-a-local-password';
+CREATE DATABASE facilio OWNER facilio;
+```
+
+Ownership at database creation is enough for Alembic to manage `public`. Do not put production passwords in the repository.
 
 Theme, sidebar collapse, and motion preferences are stored in `localStorage` under `facilio.preferences`. Motion may be `system`, `reduced`, or `full`. Reduced motion (from Settings or `prefers-reduced-motion`, unless Full is selected) removes non-essential movement; loading, status, and focus remain. First-use cue dismissals use `facilio.onboarding.*`. They are not sent to the API.
 
-Frontend routes other than Home are code-split. Activity list/detail polling runs only while a job is queued, running, or cancelling. Dataset analysis polling runs only while a profile is `PROFILING`. Previews stay bounded by `PREVIEW_MAX_ROWS` / `PREVIEW_MAX_COLUMNS`.
+Frontend routes other than Home are code-split. Activity list/detail polling runs only while a job is queued, running, or cancelling. Dataset analysis polling runs only while a profile is `PROFILING`. Previews stay bounded by `PREVIEW_MAX_ROWS` / `PREVIEW_MAX_COLUMNS`. Invalid `page` / `page_size` values return HTTP 422 (`page >= 1`, `page_size` 1–100).
 
 Responsive layout uses content-dependent max widths: readable copy stays narrower than data tables and the dataset workspace. Below `xl`, the cleanup builder stacks into Actions / Steps / Configure. Activity uses cards under `md`. Help becomes a full-width panel on small screens.
 
@@ -32,9 +44,9 @@ See [docs/ux/final-experience-polish.md](ux/final-experience-polish.md).
 
 ## Configuration
 
-- Root `.env.example` documents Compose and API settings.
+- Root `.env.example` is the tracked template. Root `.env` is the only file the API and worker load.
 - `apps/web/.env.example` documents Vite settings.
-- Do not commit `.env` files.
+- Do not commit `.env` files. Do not rely on `apps/api/.env`.
 
 Upload limits:
 
@@ -87,4 +99,4 @@ cd apps/web && npm run lint && npm run format:check && npm run typecheck && npm 
 
 Ingestion, profiling, transformation, and workflow logs include request ID and dataset/version/workflow/run IDs where available; they do not log row contents.
 
-Profiling formulas, Not assessed semantics, and issue rules: [profiling.md](profiling.md). Transformations and versioning: [transformations.md](transformations.md). Workflows: [workflows.md](workflows.md). Jobs: [jobs.md](jobs.md). After pulling Phase 7, apply `alembic upgrade head` and restart the API and worker.
+Profiling formulas, Not assessed semantics, and issue rules: [profiling.md](profiling.md). Transformations and versioning: [transformations.md](transformations.md). Workflows: [workflows.md](workflows.md). Jobs: [jobs.md](jobs.md). After pulling schema changes, apply `alembic upgrade head` and restart the API and worker.

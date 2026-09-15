@@ -11,6 +11,7 @@ import {
   useDatasetsQuery,
   useImportCustomerSampleMutation,
   useUploadDatasetMutation,
+  useWorkspaceStatsQuery,
 } from "@/features/datasets/queries";
 import { useJobsQuery } from "@/features/jobs/queries";
 import { FirstUseCue } from "@/features/onboarding/FirstUseCue";
@@ -30,13 +31,16 @@ export function OverviewPage() {
   const tryStarted = useRef(false);
   const navigate = useNavigate();
   const datasetsQuery = useDatasetsQuery(1, 20);
+  const statsQuery = useWorkspaceStatsQuery();
   const health = useHealthQuery();
   const apiDown = health.isError;
   const homeKind = classifyHome({
-    datasetsPending: datasetsQuery.isPending,
+    datasetsPending: datasetsQuery.isPending || statsQuery.isPending,
     datasetsFailed: datasetsQuery.isError,
     apiDown,
-    items: datasetsQuery.data?.items,
+    items: statsQuery.data?.recent_datasets ?? datasetsQuery.data?.items,
+    userDatasetCount: statsQuery.data?.user_dataset_count,
+    sampleDatasetCount: statsQuery.data?.sample_dataset_count,
   });
   const hasUserData = homeKind === "returning";
   const jobsQuery = useJobsQuery({ page: 1, page_size: 5 }, hasUserData);
@@ -44,7 +48,7 @@ export function OverviewPage() {
   const uploadMutation = useUploadDatasetMutation();
   const sampleMutation = useImportCustomerSampleMutation();
 
-  const items = datasetsQuery.data?.items ?? [];
+  const items = statsQuery.data?.recent_datasets ?? datasetsQuery.data?.items ?? [];
   const sampleDataset = items.find(isSampleDataset);
   const userDatasets = items.filter((item) => !isSampleDataset(item));
   const recentDatasets = (hasUserData ? userDatasets : items).slice(0, 5);

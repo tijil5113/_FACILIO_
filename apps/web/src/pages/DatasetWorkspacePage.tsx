@@ -988,7 +988,7 @@ function IngestionColumns({
                   {column.index + 1}
                 </td>
                 <td className="px-4 py-2 text-ink">{column.name || "(blank)"}</td>
-                <td className="px-4 py-2 font-mono text-xs uppercase text-ink-secondary">
+                <td className="px-4 py-2 text-xs uppercase text-ink-secondary">
                   {column.dtype}
                 </td>
               </tr>

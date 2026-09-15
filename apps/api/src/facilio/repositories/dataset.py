@@ -49,6 +49,35 @@ class DatasetRepository:
     def count(self) -> int:
         return int(self.session.scalar(select(func.count()).select_from(Dataset)) or 0)
 
+    def count_samples(self) -> int:
+        return int(
+            self.session.scalar(select(func.count()).where(Dataset.is_sample.is_(True)))
+            or 0
+        )
+
+    def list_recent_for_home(self, *, limit: int = 5) -> list[Dataset]:
+        """Newest user datasets first; samples only if there is no user data."""
+        users = list(
+            self.session.scalars(
+                select(Dataset)
+                .options(*_dataset_options())
+                .where(Dataset.is_sample.is_(False))
+                .order_by(Dataset.created_at.desc(), Dataset.id.desc())
+                .limit(limit)
+            )
+        )
+        if users:
+            return users
+        return list(
+            self.session.scalars(
+                select(Dataset)
+                .options(*_dataset_options())
+                .where(Dataset.is_sample.is_(True))
+                .order_by(Dataset.created_at.desc(), Dataset.id.desc())
+                .limit(limit)
+            )
+        )
+
     def get_by_sample_key(self, sample_key: str) -> Dataset | None:
         stmt = (
             select(Dataset)

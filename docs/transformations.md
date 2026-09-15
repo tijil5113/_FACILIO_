@@ -110,7 +110,7 @@ If the in-memory transform succeeds and the file is written but the database com
 
 ## Performance
 
-Transformations run in-process with pandas on the bounded upload size. There is no distributed execution and no large-data claim. A later phase can move the same engine onto a job worker without changing operation semantics.
+Transformations run in-process with pandas on the bounded upload size. There is no distributed execution and no large-data claim. Saved Cleanups reuse this engine on the RQ worker; a single Transform apply still runs in the API request.
 
 ## Security and logging
 

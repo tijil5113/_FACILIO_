@@ -16,6 +16,20 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: facilio
+          POSTGRES_PASSWORD: facilio_ci
+          POSTGRES_DB: facilio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U facilio -d facilio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,6 +48,15 @@ jobs:
         run: ruff check src tests
       - name: Tests
         run: pytest
+      - name: PostgreSQL migrate from zero
+        env:
+          APP_ENV: testing
+          SECRET_KEY: ci-secret-key-not-for-production-use
+          DATABASE_URL: postgresql+psycopg://facilio:facilio_ci@localhost:5432/facilio
+        run: alembic upgrade head
+      - name: Python dependency audit
+        continue-on-error: true
+        run: pip-audit
 
   processing:
     name: Processing package
@@ -80,3 +103,19 @@ jobs:
         run: npm run test
       - name: Production build
         run: npm run build
+      - name: npm production audit
+        run: npm audit --omit=dev
+
+  compose:
+    name: Compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose file
+        run: docker compose config --quiet
+      - name: Secret pattern scan
+        run: |
+          if git grep -I -E -- '-----BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY-----' -- ':!.github/**'; then
+            echo "Possible private key committed"
+            exit 1
+          fi

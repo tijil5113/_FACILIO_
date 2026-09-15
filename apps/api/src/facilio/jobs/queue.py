@@ -20,6 +20,8 @@ class JobQueue(Protocol):
 
     def queued_count(self) -> int | None: ...
 
+    def contains(self, job_id: str) -> bool: ...
+
     def backend(self) -> str: ...
 
 
@@ -41,6 +43,9 @@ class MemoryJobQueue:
 
     def queued_count(self) -> int | None:
         return len(self.items)
+
+    def contains(self, job_id: str) -> bool:
+        return job_id in self.items
 
     def backend(self) -> str:
         return "memory"
@@ -81,6 +86,18 @@ class RedisJobQueue:
             return int(self._queue.count)
         except Exception:
             return None
+
+    def contains(self, job_id: str) -> bool:
+        try:
+            needle = str(job_id)
+            for item in self._queue.jobs:
+                args = item.args or ()
+                if args and str(args[0]) == needle:
+                    return True
+            return False
+        except Exception:
+            logger.warning("queue contains check failed job_id=%s", job_id)
+            return False
 
     def backend(self) -> str:
         return "redis"

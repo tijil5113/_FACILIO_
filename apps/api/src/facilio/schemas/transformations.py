@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from facilio.schemas.datasets import DatasetSummary
+
 VersionKind = Literal["ORIGINAL", "DERIVED"]
 ProfileStatus = Literal["NOT_PROFILED", "PROFILING", "READY", "FAILED"]
 
@@ -142,3 +144,6 @@ class WorkspaceStatsData(BaseModel):
     queued_job_count: int = 0
     running_job_count: int = 0
     failed_job_count: int = 0
+    user_dataset_count: int = 0
+    sample_dataset_count: int = 0
+    recent_datasets: list[DatasetSummary] = Field(default_factory=list)

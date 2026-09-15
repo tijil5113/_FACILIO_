@@ -180,3 +180,6 @@ def test_workspace_stats(client) -> None:
     data = stats.get_json()["data"]
     assert data["datasets"] == 1
     assert data["derived_versions"] == 0
+    assert data["user_dataset_count"] == 1
+    assert data["sample_dataset_count"] == 0
+    assert len(data["recent_datasets"]) == 1

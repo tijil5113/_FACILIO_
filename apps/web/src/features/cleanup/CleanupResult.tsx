@@ -57,8 +57,8 @@ export function CleanupResult({
         <RecoveryMessage
           experience={{
             title: "Cleanup complete",
-            explanation: "Your cleaned version was created successfully.",
-            consequence: "FACILIO couldn't finish analyzing the new version.",
+            explanation: `V${String(output)} was created successfully, but FACILIO could not analyze the cleaned version.`,
+            consequence: "Quality comparison is unavailable until analysis succeeds.",
             severity: "warning",
             retrySafe: true,
             learnHref: "/learn#data",

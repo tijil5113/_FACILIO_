@@ -1,6 +1,6 @@
 # FACILIO navigation and surface blueprint
 
-Locked in Phase 8A-2. Backend routes may stay. Nav and labels change in implementation phases.
+Primary navigation and surfaces as shipped. `/runs` and `/quality` remain unlinked advanced routes. `/exports` remains unlinked and unfinished.
 
 ## 1. Final primary navigation
 

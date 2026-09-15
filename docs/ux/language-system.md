@@ -1,6 +1,6 @@
 # FACILIO human language system
 
-Locked in Phase 8A-2. Does not change running UI until implementation phases.
+Locked language for the shipped UI.
 
 ## 1. Voice
 

@@ -19,8 +19,12 @@ def _service() -> DatasetService:
 def register(blueprint: Blueprint) -> None:
     @blueprint.get("/datasets")
     def list_datasets():
-        page = request.args.get("page", default=1, type=int) or 1
-        page_size = request.args.get("page_size", default=20, type=int) or 20
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("page_size", default=20, type=int)
+        if page is None:
+            page = 1
+        if page_size is None:
+            page_size = 20
         payload = _service().list_datasets(page=page, page_size=page_size)
         return success_response(payload.model_dump(mode="json"))
 
@@ -95,8 +99,12 @@ def register(blueprint: Blueprint) -> None:
     def list_issues(dataset_id: str):
         from facilio.services.profiles import ProfileService
 
-        page = request.args.get("page", default=1, type=int) or 1
-        page_size = request.args.get("page_size", default=20, type=int) or 20
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("page_size", default=20, type=int)
+        if page is None:
+            page = 1
+        if page_size is None:
+            page_size = 20
         payload = ProfileService(
             current_app.config["FACILIO_SETTINGS"],
             current_app.extensions["database"],

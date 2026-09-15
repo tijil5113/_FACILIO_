@@ -203,8 +203,8 @@ export function WorkflowsPage() {
           />
           <TechnicalDetails>
             <p>
-              This creates a workflow definition. You add steps next. Running it later
-              creates a new dataset version and does not overwrite the original.
+              This creates a Cleanup. You add steps next. Running it later creates a new
+              dataset version and does not overwrite the original.
             </p>
           </TechnicalDetails>
           <div className="flex justify-end gap-2">

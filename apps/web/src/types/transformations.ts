@@ -143,6 +143,9 @@ export interface WorkspaceStats {
   queued_job_count: number;
   running_job_count: number;
   failed_job_count: number;
+  user_dataset_count?: number;
+  sample_dataset_count?: number;
+  recent_datasets?: import("@/types/dataset").DatasetSummary[];
 }
 
 export interface SuggestedOperation {

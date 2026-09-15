@@ -46,6 +46,7 @@ export interface JobSummary {
   input_version_number: number | null;
   output_version_id: string | null;
   output_version_number: number | null;
+  output_profile_status?: string | null;
   queue_name: string;
   attempt_count: number;
   max_attempts: number;

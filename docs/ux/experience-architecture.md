@@ -1,6 +1,6 @@
 # FACILIO experience architecture
 
-Phase 8A-2 locked specification. **No product implementation in this phase.**
+Shipped product experience. Implementation lives in the application; this document explains the mental model.
 
 Companion: [language-system.md](language-system.md), [navigation-blueprint.md](navigation-blueprint.md).
 

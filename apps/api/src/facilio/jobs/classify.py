@@ -36,6 +36,7 @@ _INFRA_CODES = frozenset(
     {
         "QUEUE_UNAVAILABLE",
         "QUEUE_DISPATCH_FAILED",
+        "QUEUE_ORPHAN",
         "DATABASE_UNAVAILABLE",
         "DATABASE_NOT_CONFIGURED",
     }
@@ -45,6 +46,7 @@ _RETRYABLE_CODES = frozenset(
     {
         "QUEUE_UNAVAILABLE",
         "QUEUE_DISPATCH_FAILED",
+        "QUEUE_ORPHAN",
         "WORKER_LOST",
         "DATABASE_UNAVAILABLE",
         "JOB_FINALIZATION_FAILED",

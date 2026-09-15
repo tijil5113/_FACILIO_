@@ -544,6 +544,9 @@ export function mockDatasetApi(options?: {
           derived_versions: versions.length - 1,
           transformations_applied: versions.length - 1,
           datasets_analyzed: currentProfile?.status === "READY" ? 1 : 0,
+          user_dataset_count: sample.is_sample ? 0 : 1,
+          sample_dataset_count: sample.is_sample ? 1 : 0,
+          recent_datasets: [sample],
         },
       });
     }

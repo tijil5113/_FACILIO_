@@ -18,5 +18,8 @@ def _service() -> SampleService:
 def register(blueprint: Blueprint) -> None:
     @blueprint.post("/samples/<sample_id>/import")
     def import_sample(sample_id: str):
-        payload = _service().import_sample(sample_id)
-        return success_response(payload.model_dump(mode="json"), status_code=201)
+        payload, created = _service().import_sample(sample_id)
+        return success_response(
+            payload.model_dump(mode="json"),
+            status_code=201 if created else 200,
+        )
