@@ -1,0 +1,9 @@
+name,email,city,signup_date,status,lifetime_value
+Ada Lovelace,ada@example.test,London,2024-01-12,active,1200.50
+alan turing,alan@example.test,Manchester,12/02/2024,Active,980
+Grace Hopper,grace@example.test,,2024-03-03,inactive,0
+Ada Lovelace,ada@example.test,London,2024-01-12,active,1200.50
+Edsger Dijkstra,edsger@example.test,Amsterdam,March 4 2024,ACTIVE,
+Barbara Liskov,barbara@example.test,Boston,2024-05-18,active,430.00
+Donald Knuth,,Stanford,2024-06-01,pending,75
+,unknown@example.test,Paris,2024-07-20,inactive,12.5

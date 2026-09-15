@@ -1,0 +1,6 @@
+[
+  {"sku": "WB-100", "name": "Workbench", "category": "furniture", "price": 249.0, "in_stock": true, "tags": ["oak", "assembly"]},
+  {"sku": "LT-220", "name": "Task lamp", "category": "lighting", "price": 48.5, "in_stock": true, "tags": ["led"]},
+  {"sku": "CH-010", "name": "Chair", "category": "furniture", "price": null, "in_stock": false, "tags": []},
+  {"sku": "NT-880", "name": "Notebook", "category": "paper", "price": 6, "in_stock": true, "tags": ["dot-grid"]}
+]

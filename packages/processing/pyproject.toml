@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "facilio-processing"
+version = "0.1.0"
+description = "FACILIO pandas-powered processing engine"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "FACILIO contributors" }]
+dependencies = [
+    "pandas>=2.2,<3",
+    "openpyxl>=3.1,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = ["-q"]

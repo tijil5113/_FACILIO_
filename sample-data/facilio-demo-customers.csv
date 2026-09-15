@@ -1,0 +1,21 @@
+customer_id,customer_name,email,city,state,signup_date,lifetime_value,status
+C-1001,Ada Lovelace,ada@example.com,London,ENG,2024-01-12,1200.50,active
+C-1002, Alan Turing,alan@example.com,Manchester,ENG,12/02/2024,980,Active
+C-1003,Grace Hopper,grace@example.com,,MA,2024-03-03,0,inactive
+C-1001,Ada Lovelace,ada@example.com,London,ENG,2024-01-12,1200.50,active
+C-1004,Edsger Dijkstra,edsger@example.com,Amsterdam,NH,March 4 2024,,ACTIVE
+C-1005,Barbara Liskov,barbara@example.com,Boston,MA,2024-05-18,430.00,active
+C-1006,Donald Knuth,,Stanford,CA,2024-06-01,75,pending
+C-1007,,unknown@example.com,Paris,IDF,2024-07-20,12.5,inactive
+C-1008,Katherine Johnson,katherine@example.com,White Sulphur Springs,WV,2024-08-01,2100,active
+C-1009,Margaret Hamilton,margaret@example.com,Cambridge,MA,08/15/2024,1750.25,Active
+C-1010,Tim Berners-Lee,tim@example.com,London,ENG,2024-09-01,890,active
+C-1011,Radia Perlman, radia@example.com,Portsmouth,ENG,2024-09-12,640.00,inactive
+C-1012,Linus Torvalds,linus@example.com,Helsinki,UUS,2024-10-02,310,ACTIVE
+C-1013,Guido van Rossum,guido@example.com,Beaverton,OR,October 5 2024,455.5,pending
+C-1014,Jean Bartik,jean@example.com,Alton,IN,2024-11-11,,active
+C-1015,Frances Allen,frances@example.com,Peru,NY,2024-12-01,88,Inactive
+C-1016,John Backus,john@example.com,Philadelphia,PA,2024-12-08,199.99,active
+C-1017,Dennis Ritchie,dennis@example.com,Bronxville,NY,12/20/2024,275,active
+C-1018,Ken Thompson,ken@example.com,New Orleans,LA,2025-01-04,310.10,Active
+C-1019,Brian Kernighan,brian@example.com,Toronto,ON,2025-01-18,150,pending

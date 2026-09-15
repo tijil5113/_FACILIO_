@@ -1,0 +1,343 @@
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --facilio-canvas: #f3f1ec;
+  --facilio-surface: #fbfaf7;
+  --facilio-raised: #ffffff;
+  --facilio-subtle: #ebe7de;
+  --facilio-line: #ddd6c8;
+  --facilio-line-strong: #c4bcae;
+  --facilio-ink: #1b1914;
+  --facilio-ink-secondary: #5c574c;
+  --facilio-ink-muted: #827c70;
+  --facilio-accent: #0f5c4c;
+  --facilio-accent-hover: #0a4a3e;
+  --facilio-accent-soft: #e4f0ec;
+  --facilio-success: #1d6b45;
+  --facilio-success-soft: #e5f3eb;
+  --facilio-warning: #8d5410;
+  --facilio-warning-soft: #f6eedf;
+  --facilio-danger: #9c3a32;
+  --facilio-danger-soft: #f6e8e6;
+  --facilio-info: #2a5f82;
+  --facilio-info-soft: #e6eef4;
+  --facilio-focus: #0f5c4c;
+  --facilio-sidebar: #f7f5f0;
+  --facilio-sidebar-ink: #1b1914;
+  --facilio-sidebar-muted: #7a7468;
+  --facilio-sidebar-hover: #ece8df;
+  --facilio-sidebar-active: #e4f0ec;
+  --facilio-overlay: rgb(27 25 20 / 0.4);
+  --facilio-shadow: 0 1px 2px rgb(27 25 20 / 0.06), 0 8px 24px rgb(27 25 20 / 0.06);
+  --facilio-radius-sm: 2px;
+  --facilio-radius-md: 4px;
+  --facilio-radius-lg: 6px;
+  --facilio-duration-instant: 0ms;
+  --facilio-duration-fast: 120ms;
+  --facilio-duration-base: 200ms;
+  --facilio-duration-standard: 200ms;
+  --facilio-duration-deliberate: 280ms;
+  --facilio-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: light;
+}
+
+.dark {
+  --facilio-canvas: #121410;
+  --facilio-surface: #181a16;
+  --facilio-raised: #1f221c;
+  --facilio-subtle: #161814;
+  --facilio-line: #2c3028;
+  --facilio-line-strong: #454a40;
+  --facilio-ink: #eceae4;
+  --facilio-ink-secondary: #b3aea2;
+  --facilio-ink-muted: #8b867b;
+  --facilio-accent: #6fbfab;
+  --facilio-accent-hover: #8fd0c0;
+  --facilio-accent-soft: #1c2e29;
+  --facilio-success: #73c094;
+  --facilio-success-soft: #1c2c23;
+  --facilio-warning: #d2a45c;
+  --facilio-warning-soft: #2e2618;
+  --facilio-danger: #d98a82;
+  --facilio-danger-soft: #2f1e1c;
+  --facilio-info: #7aa8c7;
+  --facilio-info-soft: #1b2730;
+  --facilio-focus: #6fbfab;
+  --facilio-sidebar: #151713;
+  --facilio-sidebar-ink: #eceae4;
+  --facilio-sidebar-muted: #8b867b;
+  --facilio-sidebar-hover: #22251f;
+  --facilio-sidebar-active: #1c2e29;
+  --facilio-overlay: rgb(8 9 7 / 0.64);
+  --facilio-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 28px rgb(0 0 0 / 0.28);
+  color-scheme: dark;
+}
+
+html[data-motion="reduced"] {
+  --facilio-duration-fast: 0ms;
+  --facilio-duration-base: 0ms;
+  --facilio-duration-standard: 0ms;
+  --facilio-duration-deliberate: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) {
+    --facilio-duration-fast: 0ms;
+    --facilio-duration-base: 0ms;
+    --facilio-duration-standard: 0ms;
+    --facilio-duration-deliberate: 0ms;
+  }
+}
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --color-canvas: var(--facilio-canvas);
+  --color-surface: var(--facilio-surface);
+  --color-raised: var(--facilio-raised);
+  --color-subtle: var(--facilio-subtle);
+  --color-line: var(--facilio-line);
+  --color-line-strong: var(--facilio-line-strong);
+  --color-ink: var(--facilio-ink);
+  --color-ink-secondary: var(--facilio-ink-secondary);
+  --color-ink-muted: var(--facilio-ink-muted);
+  --color-accent: var(--facilio-accent);
+  --color-accent-hover: var(--facilio-accent-hover);
+  --color-accent-soft: var(--facilio-accent-soft);
+  --color-success: var(--facilio-success);
+  --color-success-soft: var(--facilio-success-soft);
+  --color-warning: var(--facilio-warning);
+  --color-warning-soft: var(--facilio-warning-soft);
+  --color-danger: var(--facilio-danger);
+  --color-danger-soft: var(--facilio-danger-soft);
+  --color-info: var(--facilio-info);
+  --color-info-soft: var(--facilio-info-soft);
+  --color-focus: var(--facilio-focus);
+  --color-sidebar: var(--facilio-sidebar);
+  --color-sidebar-ink: var(--facilio-sidebar-ink);
+  --color-sidebar-muted: var(--facilio-sidebar-muted);
+  --color-sidebar-hover: var(--facilio-sidebar-hover);
+  --color-sidebar-active: var(--facilio-sidebar-active);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--facilio-canvas);
+  color: var(--facilio-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 2px solid var(--facilio-focus);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: var(--facilio-accent-soft);
+  color: var(--facilio-ink);
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  z-index: 80;
+  background: var(--facilio-ink);
+  color: var(--facilio-canvas);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--facilio-radius-md);
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+.page-enter {
+  animation: page-enter var(--facilio-duration-standard) var(--facilio-ease);
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html[data-motion="reduced"] .page-enter,
+html[data-motion="reduced"] .journey-step,
+html[data-motion="reduced"] .drawer-enter,
+html[data-motion="reduced"] .overlay-enter {
+  animation: none;
+}
+
+.overlay-enter {
+  animation: overlay-enter var(--facilio-duration-fast) var(--facilio-ease);
+}
+
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.drawer-enter {
+  animation: drawer-enter var(--facilio-duration-standard) var(--facilio-ease);
+}
+
+@keyframes drawer-enter {
+  from {
+    opacity: 0.72;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.drawer-enter-left {
+  animation: drawer-enter-left var(--facilio-duration-standard) var(--facilio-ease);
+}
+
+@keyframes drawer-enter-left {
+  from {
+    opacity: 0.72;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.journey-step {
+  animation: page-enter var(--facilio-duration-deliberate) var(--facilio-ease) both;
+}
+
+.status-pulse {
+  animation: status-pulse 1.2s var(--facilio-ease) infinite;
+}
+
+html[data-motion="reduced"] .status-pulse {
+  animation: none;
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.content-readable {
+  max-width: 42rem;
+}
+
+.content-page {
+  max-width: 72rem;
+}
+
+.content-workspace {
+  max-width: 80rem;
+}
+
+@media (max-width: 767px) {
+  .stack-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .stack-table,
+  .stack-table tbody,
+  .stack-table tr,
+  .stack-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .stack-table tr {
+    border-bottom: 1px solid var(--facilio-line);
+    padding: 0.75rem 1rem;
+  }
+
+  .stack-table td {
+    padding: 0.2rem 0;
+  }
+
+  .stack-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    color: var(--facilio-ink-muted);
+  }
+}
+
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--facilio-subtle) 0%,
+    var(--facilio-surface) 50%,
+    var(--facilio-subtle) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+html[data-motion="reduced"] .skeleton-pulse {
+  animation: none;
+  background: var(--facilio-subtle);
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}

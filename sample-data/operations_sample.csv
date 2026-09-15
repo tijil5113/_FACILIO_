@@ -1,0 +1,4 @@
+record_id,facility,metric,value,captured_at
+1,North Plant,throughput,128.4,2026-01-12T09:00:00Z
+2,North Plant,defect_rate,0.012,2026-01-12T09:00:00Z
+3,South Plant,throughput,97.1,2026-01-12T09:00:00Z
