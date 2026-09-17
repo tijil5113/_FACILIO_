@@ -501,17 +501,11 @@ def test_redis_queue_ping_and_enqueue_failure(monkeypatch) -> None:
 
 
 def test_worker_main_requires_redis(monkeypatch) -> None:
-    from facilio.core.config import Settings
     from facilio.worker.runtime import main
 
     monkeypatch.setattr(
         "facilio.worker.runtime.get_settings",
-        lambda: Settings(
-            APP_ENV="testing",
-            SECRET_KEY="test-secret-key-not-for-production",
-            DATABASE_URL="sqlite:///:memory:",
-            REDIS_URL="",
-        ),
+        lambda: make_settings(),
     )
     assert main(["work"]) == 2
 

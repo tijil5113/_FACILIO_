@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from facilio.core.config import Settings, clear_settings_cache, get_settings
+from tests.conftest import TEST_SECRET_KEY
 
 
 def test_production_rejects_weak_secret() -> None:
@@ -132,3 +133,19 @@ def test_canonical_env_file_is_repository_root() -> None:
     assert env_file == repository_root() / ".env"
     assert env_file.parent == repository_root()
     assert "apps/api" not in str(env_file)
+
+
+def test_get_settings_uses_isolated_test_secret() -> None:
+    clear_settings_cache()
+    settings = get_settings()
+    assert settings.SECRET_KEY == TEST_SECRET_KEY
+    assert settings.is_testing()
+    clear_settings_cache()
+
+
+def test_settings_reject_missing_secret_key(monkeypatch) -> None:
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    clear_settings_cache()
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+    clear_settings_cache()
