@@ -119,3 +119,35 @@ jobs:
             echo "Possible private key committed"
             exit 1
           fi
+
+  docker:
+    name: Docker images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t facilio-api:ci -f apps/api/Dockerfile .
+      - name: Verify backend image contents
+        run: |
+          docker run --rm --entrypoint python facilio-api:ci -c "
+          from facilio.services.samples import bundled_sample_path
+          from importlib.metadata import version
+          from pathlib import Path
+          assert version('facilio-api')
+          assert version('facilio-processing')
+          assert Path('/app/README.md').is_file()
+          assert Path('/app/scripts/docker-entrypoint.sh').is_file()
+          sample = bundled_sample_path('facilio-demo-customers.csv')
+          assert sample == Path('/app/sample-data/facilio-demo-customers.csv')
+          assert sample.is_file()
+          print('backend image ok')
+          "
+      - name: Build web image
+        run: >
+          docker build -t facilio-web:ci -f apps/web/Dockerfile
+          --build-arg VITE_API_BASE_URL=https://api.example.test
+          ./apps/web
+      - name: Verify web bundle uses build-time API origin
+        run: |
+          docker run --rm --entrypoint sh facilio-web:ci -c \
+            "grep -R 'https://api.example.test' /usr/share/nginx/html >/dev/null"

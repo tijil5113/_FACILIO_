@@ -154,6 +154,19 @@ def test_demo_uses_real_profiler_signals(client) -> None:
     assert item["is_sample"] is True
 
 
+def test_sample_data_dir_env_override(tmp_path: Path, monkeypatch) -> None:
+    from shutil import copyfile
+
+    source = bundled_sample_path("facilio-demo-customers.csv")
+    override = tmp_path / "sample-data"
+    override.mkdir()
+    copyfile(source, override / "facilio-demo-customers.csv")
+    monkeypatch.setenv("FACILIO_SAMPLE_DATA_DIR", str(override))
+    path = bundled_sample_path("facilio-demo-customers.csv")
+    assert path.parent == override.resolve()
+    assert path.is_file()
+
+
 def test_bundled_sample_path_rejects_user_filenames() -> None:
     with pytest.raises(AppError) as blocked:
         bundled_sample_path("../facilio-demo-customers.csv")
@@ -164,6 +177,9 @@ def test_bundled_sample_path_rejects_user_filenames() -> None:
     path = bundled_sample_path("facilio-demo-customers.csv")
     assert path.name == "facilio-demo-customers.csv"
     assert path.is_file()
+    from facilio.services.samples import _IMAGE_SAMPLE_DATA_DIR
+
+    assert Path("/app/sample-data") == _IMAGE_SAMPLE_DATA_DIR
 
 
 def test_normal_upload_is_not_marked_sample(client) -> None:

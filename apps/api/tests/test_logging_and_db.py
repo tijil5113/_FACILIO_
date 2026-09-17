@@ -27,7 +27,12 @@ def test_json_formatter_includes_request_id() -> None:
 
 def test_configure_logging_production_uses_json(capsys) -> None:
     settings = make_settings(
-        APP_ENV="production", SECRET_KEY="a" * 32, LOG_LEVEL="INFO"
+        APP_ENV="production",
+        SECRET_KEY="a" * 32,
+        LOG_LEVEL="INFO",
+        DATABASE_URL="postgresql+psycopg://facilio:x@localhost:5432/facilio",
+        CORS_ORIGINS="https://app.example.com",
+        REDIS_URL="redis://localhost:6379/0",
     )
     configure_logging(settings)
     logging.getLogger("facilio").info("startup-complete")

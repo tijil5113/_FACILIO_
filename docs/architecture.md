@@ -111,7 +111,7 @@ Empty-content rule: a file with no usable tabular structure is rejected. A CSV/X
 
 ## Persistence
 
-PostgreSQL stores **metadata only** (`datasets`, `dataset_versions`, `transformations`, `staging_uploads`, `dataset_profiles`, `column_profiles`, `quality_issues`, `workflows`, `workflow_steps`, `workflow_runs`, `workflow_step_runs`). Managed storage holds original files and derived `facilio.table.v1` documents under `UPLOAD_ROOT`.
+PostgreSQL stores **metadata only** (`datasets`, `dataset_versions`, `transformations`, `staging_uploads`, `dataset_profiles`, `column_profiles`, `quality_issues`, `workflows`, `workflow_steps`, `workflow_runs`, `workflow_step_runs`). Managed storage holds original files and derived `facilio.table.v1` documents under `UPLOAD_ROOT`. API and worker must share that directory. Railway collocates both processes in one service with a volume at `/app/runtime/uploads`. Compose uses a named volume instead. Object storage is not implemented.
 
 Tests use SQLite files in a temporary directory and a temporary upload root. They never write into developer `runtime/uploads`.
 

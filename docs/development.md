@@ -56,18 +56,18 @@ Upload limits:
 | `MAX_CONTENT_LENGTH` | ~18 MiB | Flask request cap (allows multipart overhead) |
 | `PREVIEW_MAX_ROWS` | 100 | Preview row bound |
 | `PREVIEW_MAX_COLUMNS` | 200 | Preview column bound |
-| `UPLOAD_ROOT` | `runtime/uploads` | Managed source files (gitignored) |
+| `UPLOAD_ROOT` | `runtime/uploads` | Managed source files (gitignored). Production Docker: `/app/runtime/uploads` |
 | `PROFILE_TOP_VALUES_LIMIT` | 10 | Top categorical values |
 | `PROFILE_EVIDENCE_LIMIT` | 8 | Issue evidence samples |
 | `PROFILE_HISTOGRAM_BINS` | 10 | Numeric histogram bins |
 | `PROFILE_DUPLICATE_GROUPS_LIMIT` | 5 | Duplicate groups |
 | `MAX_WORKFLOW_STEPS` | 50 | Maximum enabled steps in a workflow |
-| `REDIS_URL` | unset | RQ Redis URL; empty uses an in-memory queue for tests |
+| `REDIS_URL` | unset | RQ Redis URL; empty uses an in-memory queue for tests/development. Production requires Redis |
 | `JOB_QUEUE_NAME` | workflows | RQ queue name |
 | `MAX_JOB_ATTEMPTS` | 3 | Retry ceiling per job |
 | `JOB_STALE_SECONDS` | 90 | Stale running-job recovery threshold |
 
-Production (`APP_ENV=production`) rejects weak secrets, missing `DATABASE_URL`, and wildcard CORS.
+Production (`APP_ENV=production`) rejects weak secrets, missing `DATABASE_URL`, non-PostgreSQL URLs, wildcard CORS, and missing `REDIS_URL`. Railway `postgresql://` URLs are rewritten to `postgresql+psycopg://`. Flask debug is off.
 
 ## Ingestion testing
 
@@ -93,10 +93,12 @@ Invalid fixtures belong in package/API tests, not `sample-data/`.
 cd apps/api && .venv/bin/ruff format --check src tests && .venv/bin/ruff check src tests && .venv/bin/pytest
 cd packages/processing && .venv/bin/pytest
 cd apps/web && npm run lint && npm run format:check && npm run typecheck && npm test && npm run build
+docker build -f apps/api/Dockerfile .
+docker build -f apps/web/Dockerfile --build-arg VITE_API_BASE_URL=http://localhost:5050 ./apps/web
 ```
 
 ## Request correlation
 
 Ingestion, profiling, transformation, and workflow logs include request ID and dataset/version/workflow/run IDs where available; they do not log row contents.
 
-Profiling formulas, Not assessed semantics, and issue rules: [profiling.md](profiling.md). Transformations and versioning: [transformations.md](transformations.md). Workflows: [workflows.md](workflows.md). Jobs: [jobs.md](jobs.md). After pulling schema changes, apply `alembic upgrade head` and restart the API and worker.
+Profiling formulas, Not assessed semantics, and issue rules: [profiling.md](profiling.md). Transformations and versioning: [transformations.md](transformations.md). Workflows: [workflows.md](workflows.md). Jobs: [jobs.md](jobs.md). Railway: [deployment/railway.md](deployment/railway.md). After pulling schema changes, apply `alembic upgrade head` and restart the API and worker.

@@ -21,6 +21,11 @@ def test_root_service_index(client) -> None:
     assert body["data"]["readiness"] == "/api/v1/readiness"
 
 
+def test_create_app_disables_flask_debug(client) -> None:
+    assert client.application.config["DEBUG"] is False
+    assert client.application.debug is False
+
+
 def test_create_app_accepts_explicit_settings() -> None:
     settings = Settings.model_validate(
         {

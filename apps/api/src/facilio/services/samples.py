@@ -6,6 +6,7 @@ service. Callers cannot supply filesystem paths or remote URLs.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -128,12 +129,29 @@ def bundled_sample_path(filename: str) -> Path:
     return path
 
 
+_IMAGE_SAMPLE_DATA_DIR = Path("/app/sample-data")
+
+
 def _sample_data_dir() -> Path:
+    candidates: list[Path] = []
+    env_dir = os.environ.get("FACILIO_SAMPLE_DATA_DIR", "").strip()
+    if env_dir:
+        candidates.append(Path(env_dir))
+    candidates.append(_IMAGE_SAMPLE_DATA_DIR)
     here = Path(__file__).resolve()
     for parent in here.parents:
-        candidate = (parent / "sample-data").resolve()
-        if candidate.is_dir():
-            return candidate
+        candidates.append(parent / "sample-data")
+    seen: set[Path] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if resolved.is_dir():
+            return resolved
     raise AppError(
         "SAMPLE_UNAVAILABLE",
         "The bundled sample file could not be read.",

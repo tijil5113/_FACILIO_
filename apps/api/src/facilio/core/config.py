@@ -13,6 +13,10 @@ from sqlalchemy.engine import make_url
 
 type EnvironmentName = Literal["development", "testing", "production"]
 
+_POSTGRESQL_SCHEME = "postgresql://"
+_POSTGRES_SCHEME = "postgres://"
+_PSYCOPG_SCHEME = "postgresql+psycopg://"
+
 _WEAK_SECRETS = frozenset(
     {
         "",
@@ -26,8 +30,25 @@ _WEAK_SECRETS = frozenset(
 
 
 def repository_root() -> Path:
-    """Return the FACILIO repository root (apps/api/src/facilio/core → 5 parents)."""
-    return Path(__file__).resolve().parents[5]
+    """Return the FACILIO repository root when running from source.
+
+    Local checkouts resolve ``apps/api/src/facilio/core`` → five parents.
+    Installed images (``/app/src`` or site-packages) have a shallower tree, so
+    this walks for ``apps/api/pyproject.toml`` and otherwise falls back without
+    requiring a fixed parent index.
+    """
+    return _detect_repository_root(Path(__file__))
+
+
+def _detect_repository_root(start: Path) -> Path:
+    here = start.resolve()
+    for parent in here.parents:
+        if (parent / "apps" / "api" / "pyproject.toml").is_file():
+            return parent
+    parents = list(here.parents)
+    if not parents:
+        return here.parent
+    return parents[min(5, len(parents) - 1)]
 
 
 def canonical_env_file() -> Path:
@@ -66,6 +87,24 @@ def _prefer_canonical_database_url() -> None:
         return
     if backend == "sqlite":
         os.environ.pop("DATABASE_URL", None)
+
+
+def normalize_database_url(url: str) -> str:
+    """Rewrite Railway-style Postgres URLs to SQLAlchemy's psycopg3 dialect.
+
+    Only the scheme is changed. Credentials are never logged.
+    ``postgresql+psycopg://``, SQLite, and unrelated schemes are left intact.
+    """
+    stripped = url.strip()
+    if not stripped:
+        return stripped
+    if stripped.startswith(_PSYCOPG_SCHEME):
+        return stripped
+    if stripped.startswith(_POSTGRESQL_SCHEME):
+        return _PSYCOPG_SCHEME + stripped[len(_POSTGRESQL_SCHEME) :]
+    if stripped.startswith(_POSTGRES_SCHEME):
+        return _PSYCOPG_SCHEME + stripped[len(_POSTGRES_SCHEME) :]
+    return stripped
 
 
 class Settings(BaseSettings):
@@ -110,6 +149,20 @@ class Settings(BaseSettings):
     def max_upload_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def coerce_database_url(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        return normalize_database_url(value)
+
+    @field_validator("REDIS_URL", mode="before")
+    @classmethod
+    def coerce_redis_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
     @field_validator("LOG_LEVEL")
     @classmethod
     def normalize_log_level(cls, value: str) -> str:
@@ -136,11 +189,15 @@ class Settings(BaseSettings):
                 )
             if not self.DATABASE_URL:
                 raise ValueError("DATABASE_URL is required in production")
+            if self.database_backend() != "PostgreSQL":
+                raise ValueError("DATABASE_URL must use PostgreSQL in production")
             origins = self.cors_origin_list()
             if not origins:
                 raise ValueError("CORS_ORIGINS is required in production")
             if "*" in origins:
                 raise ValueError("Wildcard CORS origins are not allowed in production")
+            if not self.REDIS_URL:
+                raise ValueError("REDIS_URL is required in production")
         if self.APP_ENV == "development":
             root_backend = _env_file_database_backend(canonical_env_file())
             if root_backend == "PostgreSQL" and self.database_backend() == "SQLite":

@@ -24,6 +24,7 @@ def create_app(settings: Settings | None = None) -> Flask:
 
     app = Flask("facilio")
     app.config["FACILIO_SETTINGS"] = resolved
+    app.config["DEBUG"] = False
     app.url_map.strict_slashes = False
 
     register_security(app, resolved)

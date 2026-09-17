@@ -32,11 +32,18 @@ FACILIO does **not** export cleaned files, authenticate users, schedule jobs, or
 ## Architecture
 
 ```text
-Browser  →  React (Vite)  →  Flask API  →  PostgreSQL
-                              Flask API  →  Redis/RQ  →  worker
-                              API/worker →  packages/processing (pandas)
-                              files      →  local filesystem (runtime/uploads)
+Browser  →  React SPA (Vite / nginx)
+         →  Flask API (Gunicorn)
+                Flask API  →  PostgreSQL
+                Flask API  →  Redis/RQ  →  worker
+                API/worker →  packages/processing (pandas)
+                files      →  local filesystem (UPLOAD_ROOT)
 ```
+
+Local Compose runs API and worker as separate containers sharing a volume.
+Railway production collocates Gunicorn and the worker in one backend
+service so both processes share one persistent volume. See
+[docs/deployment/railway.md](docs/deployment/railway.md).
 
 | Path | Execution |
 | --- | --- |
@@ -128,8 +135,9 @@ Tracked: `.env.example`. Untracked: `.env`.
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | SQLAlchemy URL (`postgresql+psycopg://...`) |
-| `REDIS_URL` | RQ Redis URL; empty uses an in-memory queue for tests |
+| `DATABASE_URL` | SQLAlchemy URL. Production accepts Railway `postgresql://...` and normalizes it to `postgresql+psycopg://...` |
+| `REDIS_URL` | RQ Redis URL. Empty uses an in-memory queue for tests/development. Production requires Redis |
+| `UPLOAD_ROOT` | Managed source and derived files. Production: `/app/runtime/uploads` |
 | `CORS_ORIGINS` | Browser origins. Production rejects `*` and requires an explicit list |
 | `JOB_STALE_SECONDS` | Stale running/queued recovery threshold (default 90) |
 | `WORKER_HEARTBEAT_SECONDS` | Periodic worker heartbeat (default 30) |
@@ -183,7 +191,9 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Services: `db` (PostgreSQL 16), `redis`, `api` (Gunicorn), `worker` (same image), `web` (nginx serving the production Vite build). API and worker receive the same `DATABASE_URL` and `REDIS_URL`. The web container proxies `/api` to the API. Host ports: API 5050, web 8080.
+Services: `db` (PostgreSQL 16), `redis`, `api` (Gunicorn only), `worker` (same image, worker only), `web` (nginx serving the production Vite build). Compose overrides the image default (`api-and-worker`) so local API and worker stay separate while sharing `facilio_uploads`. The web image is built with `VITE_API_BASE_URL` (default `http://localhost:5050`) and does not proxy `/api` to `api:5000`. Host ports: API 5050, web 8080.
+
+Railway production uses one backend service for API + worker, a volume at `/app/runtime/uploads`, and build-time `VITE_API_BASE_URL` pointing at the public API origin. See [docs/deployment/railway.md](docs/deployment/railway.md).
 
 Do not bake secrets into images.
 
@@ -203,6 +213,6 @@ Do not bake secrets into images.
 
 ## Project status
 
-FACILIO is a release candidate for local demonstration and review. It is not a deployed SaaS product.
+FACILIO is a release candidate for demonstration and review. Local Compose and Railway production deployment are supported. It is not a multi-tenant SaaS product.
 
-See [docs/architecture.md](docs/architecture.md), [docs/development.md](docs/development.md), [docs/jobs.md](docs/jobs.md), [docs/workflows.md](docs/workflows.md), and [docs/resume-language.md](docs/resume-language.md).
+See [docs/architecture.md](docs/architecture.md), [docs/development.md](docs/development.md), [docs/deployment/railway.md](docs/deployment/railway.md), [docs/jobs.md](docs/jobs.md), [docs/workflows.md](docs/workflows.md), and [docs/resume-language.md](docs/resume-language.md).
