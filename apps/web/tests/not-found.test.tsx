@@ -17,8 +17,14 @@ test("unknown routes render the not-found page", async () => {
 test("not-found page returns to home", async () => {
   const user = userEvent.setup();
   renderApp(["/missing"]);
-  await user.click(await screen.findByRole("link", { name: /return to home/i }));
+  await user.click(await screen.findByRole("link", { name: /go home/i }));
   expect(
     await screen.findByText("Turn messy data into data you can understand and trust."),
   ).toBeInTheDocument();
+});
+
+test("not-found page offers datasets", () => {
+  renderApp(["/this-route-does-not-exist"]);
+  const actions = screen.getAllByRole("link", { name: "Datasets" });
+  expect(actions.some((link) => link.getAttribute("href") === "/datasets")).toBe(true);
 });

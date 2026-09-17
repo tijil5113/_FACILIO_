@@ -27,11 +27,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       return (
         <main className="mx-auto max-w-xl px-6 py-16">
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">
-            Something prevented this page from loading.
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-ink-secondary">
-            FACILIO did not confirm a result. You can try this page again or return Home.
+          <h1 className="type-page-title text-ink">This page couldn’t be shown</h1>
+          <p className="type-body mt-3 text-ink-secondary">
+            Something prevented this page from loading. Your data was not changed from
+            this screen. You can try again or go Home.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             <Button

@@ -17,7 +17,10 @@ test("primary navigation reaches datasets", async () => {
   const user = userEvent.setup();
   renderApp(["/overview"]);
   await user.click(within(applicationNav()).getByRole("link", { name: /datasets/i }));
-  expect(await screen.findByText(/upload and work with your data/i)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Datasets" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /upload (your )?data/i }),
+  ).toBeInTheDocument();
 });
 
 test("primary navigation reaches learn", async () => {
@@ -40,7 +43,7 @@ test("secondary navigation reaches settings", async () => {
 test("cleanups route shows a real catalog empty state", async () => {
   renderApp(["/workflows"]);
   expect(await screen.findByRole("heading", { name: "Cleanups" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "New cleanup" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "New Cleanup" })).toBeInTheDocument();
   expect(screen.queryByText("Product preview")).not.toBeInTheDocument();
 });
 

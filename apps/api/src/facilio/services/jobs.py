@@ -219,13 +219,18 @@ class JobService:
     def operations_health(self) -> OperationsHealthData:
         queue_ready = self._queue.ping()
         queued = self._queue.queued_count()
+        try:
+            rq_workers = self._queue.live_workers()
+        except Exception:
+            rq_workers = 0
         threshold = datetime.now(UTC) - timedelta(
             seconds=self._settings.WORKER_HEARTBEAT_SECONDS * 3
         )
         with self._database.session_scope() as session:
-            workers = WorkerHeartbeatRepository(session).available_since(threshold)
+            heartbeats = WorkerHeartbeatRepository(session).available_since(threshold)
             latest = WorkerHeartbeatRepository(session).latest()
             jobs = JobRepository(session)
+            workers = max(heartbeats, rq_workers)
             return OperationsHealthData(
                 queue={
                     "status": "ready"

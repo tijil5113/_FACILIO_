@@ -1,87 +1,106 @@
 import { LearnMoreLink } from "@/features/learn/LearnMoreLink";
 import { formatScore } from "@/lib/format";
-import type { QualitySummary } from "@/types/profile";
+import type { QualityDimension, QualitySummary } from "@/types/profile";
 
-interface QualityHeroProps {
+interface QualityPanelProps {
   quality: QualitySummary;
 }
 
-export function QualityHero({ quality }: QualityHeroProps) {
+const QUALITY_EXPLANATION =
+  "FACILIO's quality score summarizes measurable checks. It does not verify whether the data is correct for its real-world purpose.";
+
+export function QualityHero({ quality }: QualityPanelProps) {
+  return <QualityPanel quality={quality} />;
+}
+
+export function QualityPanel({ quality }: QualityPanelProps) {
   const assessed = quality.overall_status === "ASSESSED";
   const score = quality.overall_score;
-  const ratio = assessed && score !== null ? Math.max(0, Math.min(100, score)) / 100 : 0;
-  const circumference = 2 * Math.PI * 54;
-  const dash = circumference * ratio;
 
   return (
-    <section
-      className="rounded-[var(--facilio-radius-md)] border border-line bg-surface px-5 py-6 sm:px-8"
-      aria-label="Data quality"
-    >
-      <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="font-mono text-[11px] tracking-[0.16em] text-ink-muted uppercase">
-            Data quality
-          </p>
-          <p className="mt-2 font-mono text-5xl font-semibold tracking-tight text-ink tabular-nums">
-            {assessed ? formatScore(score) : "—"}
-          </p>
-          <p className="mt-2 text-sm text-ink-secondary">
-            {assessed ? (quality.grade ?? "Assessed") : "Not assessed"}
-          </p>
-          <p className="mt-3 max-w-md text-sm leading-6 text-ink-muted">
-            {quality.assessed_count === 1
-              ? "1 dimension assessed"
-              : `${String(quality.assessed_count)} dimensions assessed`}
-            {quality.not_assessed_count
-              ? ` · ${String(quality.not_assessed_count)} not assessed`
-              : ""}
-            . Equal weighting of assessed dimensions only.
-          </p>
-          <p className="mt-3">
-            <LearnMoreLink to="/learn#quality">What does this score mean?</LearnMoreLink>
-          </p>
-        </div>
-        <div className="relative h-36 w-36 shrink-0" aria-hidden={!assessed}>
-          <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" role="img">
-            <title>
-              {assessed
-                ? `Overall quality ${formatScore(score)} out of 100`
-                : "Overall quality not assessed"}
-            </title>
-            <circle
-              cx="60"
-              cy="60"
-              r="54"
-              fill="none"
-              className="stroke-line"
-              strokeWidth="8"
-            />
-            {assessed ? (
-              <circle
-                cx="60"
-                cy="60"
-                r="54"
-                fill="none"
-                className="stroke-ink"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={`${String(dash)} ${String(circumference)}`}
-              />
-            ) : (
-              <circle
-                cx="60"
-                cy="60"
-                r="54"
-                fill="none"
-                className="stroke-line-strong"
-                strokeWidth="8"
-                strokeDasharray="6 8"
-              />
-            )}
-          </svg>
-        </div>
+    <section aria-label="Data quality" className="space-y-4">
+      <div>
+        <h2 className="type-section text-ink">Quality</h2>
+        <p className="type-body-sm mt-1 text-ink-secondary">
+          {assessed ? (
+            <>
+              <span className="type-data text-ink">{formatScore(score)}</span>
+              {quality.grade ? (
+                <span className="text-ink-muted">{` · ${quality.grade}`}</span>
+              ) : null}
+              . This is a summary of measured checks, not a percentage of correctness.
+            </>
+          ) : (
+            "Overall quality is not assessed for this version."
+          )}
+        </p>
+        <p className="type-caption mt-2 max-w-2xl text-ink-muted">
+          {QUALITY_EXPLANATION}
+        </p>
+        <p className="type-caption mt-1 text-ink-muted">
+          {quality.assessed_count === 1
+            ? "1 dimension assessed"
+            : `${String(quality.assessed_count)} dimensions assessed`}
+          {quality.not_assessed_count
+            ? ` · ${String(quality.not_assessed_count)} not assessed`
+            : ""}
+          . Assessed dimensions are weighted equally.
+        </p>
+        <p className="mt-2">
+          <LearnMoreLink to="/learn#quality">What does this score mean?</LearnMoreLink>
+        </p>
       </div>
+      {quality.dimensions.length > 0 ? (
+        <DimensionList dimensions={quality.dimensions} />
+      ) : null}
     </section>
+  );
+}
+
+export function DimensionCards({ dimensions }: { dimensions: QualityDimension[] }) {
+  return <DimensionList dimensions={dimensions} />;
+}
+
+function DimensionList({ dimensions }: { dimensions: QualityDimension[] }) {
+  return (
+    <ul className="divide-y divide-line border-y border-line">
+      {dimensions.map((dimension) => {
+        const assessed = dimension.status === "ASSESSED" && dimension.score !== null;
+        const width = assessed ? Math.max(0, Math.min(100, dimension.score ?? 0)) : 0;
+        const valueLabel = assessed ? formatScore(dimension.score) : "Not assessed";
+        return (
+          <li key={dimension.key} className="py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="type-body font-medium text-ink">{dimension.label}</h3>
+              <p className="type-data text-ink-secondary">{valueLabel}</p>
+            </div>
+            <div
+              className="mt-2 h-1 overflow-hidden rounded-full bg-subtle"
+              aria-hidden="true"
+            >
+              {assessed ? (
+                <div className="h-full bg-ink" style={{ width: `${String(width)}%` }} />
+              ) : (
+                <div className="h-full w-full border border-dashed border-line-strong" />
+              )}
+            </div>
+            <p className="sr-only">
+              {dimension.label}: {valueLabel}
+              {assessed ? " out of 100" : ""}
+            </p>
+            <p className="type-caption mt-2 text-ink-muted">{dimension.explanation}</p>
+            {dimension.status === "NOT_ASSESSED" ? (
+              <p className="type-caption mt-1 text-ink-muted">
+                Not assessed is not a score of 0.
+              </p>
+            ) : (
+              <p className="type-caption mt-1 text-ink-muted">
+                {dimension.evidence_summary}
+              </p>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

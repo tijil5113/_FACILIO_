@@ -24,7 +24,7 @@ export function NoticeHost() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4"
+      className="pointer-events-none fixed inset-x-0 bottom-4 z-[var(--facilio-z-toast)] flex justify-center px-4"
       role="status"
       aria-live="polite"
     >

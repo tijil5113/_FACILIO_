@@ -14,8 +14,8 @@ test("empty datasets state shows upload", async () => {
   vi.stubGlobal("fetch", mockApi({}));
   renderApp(["/datasets"]);
   expect(await screen.findByRole("heading", { name: "Datasets" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Upload a file" })).toBeEnabled();
-  expect(await screen.findByText("No data yet")).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Upload your data" })).toBeEnabled();
+  expect(screen.getByRole("link", { name: "Try FACILIO" })).toBeInTheDocument();
 });
 
 test("populated dataset list renders rows", async () => {
@@ -23,7 +23,7 @@ test("populated dataset list renders rows", async () => {
   const user = userEvent.setup();
   renderApp(["/datasets"]);
   expect(await screen.findByText("customers")).toBeInTheDocument();
-  expect(screen.getByText("csv")).toBeInTheDocument();
+  expect(screen.getByText("CSV")).toBeInTheDocument();
   await user.click(screen.getByText("customers"));
   expect(await screen.findByRole("heading", { name: "customers" })).toBeInTheDocument();
 });
@@ -32,21 +32,33 @@ test("upload dialog validates unsupported files", async () => {
   vi.stubGlobal("fetch", mockDatasetApi({ list: populatedList, upload: "unsupported" }));
   const user = userEvent.setup();
   renderApp(["/datasets"]);
-  await user.click(await screen.findByRole("button", { name: "Upload a file" }));
+  await user.click(await screen.findByRole("button", { name: "Upload data" }));
   expect(
     await screen.findByRole("dialog", { name: "Upload a file" }),
   ).toBeInTheDocument();
   const file = new File(["hello"], "notes.txt", { type: "text/plain" });
   const input = screen.getByLabelText("Choose a dataset file");
   fireEvent.change(input, { target: { files: [file] } });
-  expect(await screen.findAllByText(/supported formats are/i)).not.toHaveLength(0);
+  expect(await screen.findAllByText(/FACILIO supports CSV, Excel/i)).not.toHaveLength(0);
+});
+
+test("upload dialog validates oversized files with the configured limit", async () => {
+  vi.stubGlobal("fetch", mockDatasetApi({ list: populatedList }));
+  const user = userEvent.setup();
+  renderApp(["/datasets"]);
+  await user.click(await screen.findByRole("button", { name: "Upload data" }));
+  const file = new File(["name\nAda\n"], "huge.csv", { type: "text/csv" });
+  Object.defineProperty(file, "size", { value: 17 * 1024 * 1024 });
+  const input = screen.getByLabelText("Choose a dataset file");
+  fireEvent.change(input, { target: { files: [file] } });
+  expect(await screen.findByText(/16 MB upload limit/i)).toBeInTheDocument();
 });
 
 test("upload success navigates to workspace", async () => {
   vi.stubGlobal("fetch", mockDatasetApi({ upload: "success" }));
   const user = userEvent.setup();
   renderApp(["/datasets"]);
-  await user.click(await screen.findByRole("button", { name: "Upload a file" }));
+  await user.click(await screen.findByRole("button", { name: "Upload data" }));
   const file = new File(["name,city\nAda,Paris\n"], "customers.csv", {
     type: "text/csv",
   });
@@ -60,7 +72,7 @@ test("upload failure shows an error", async () => {
   vi.stubGlobal("fetch", mockDatasetApi({ upload: "failure" }));
   const user = userEvent.setup();
   renderApp(["/datasets"]);
-  await user.click(await screen.findByRole("button", { name: "Upload a file" }));
+  await user.click(await screen.findByRole("button", { name: "Upload data" }));
   const file = new File(["a,b\n1,2,3"], "bad.csv", { type: "text/csv" });
   const input = document.querySelector('input[type="file"]') as HTMLInputElement;
   await user.upload(input, file);
@@ -72,7 +84,7 @@ test("xlsx sheet selection continues without restarting", async () => {
   vi.stubGlobal("fetch", mockDatasetApi({ upload: "sheets" }));
   const user = userEvent.setup();
   renderApp(["/datasets"]);
-  await user.click(await screen.findByRole("button", { name: "Upload a file" }));
+  await user.click(await screen.findByRole("button", { name: "Upload data" }));
   const file = new File(["pk"], "orders.xlsx", {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
@@ -93,8 +105,8 @@ test("dataset workspace preview renders null distinctly", async () => {
   renderApp([`/datasets/${sample.id}`]);
   expect(await screen.findByRole("heading", { name: "customers" })).toBeInTheDocument();
   await user.click(screen.getByRole("radio", { name: "Data" }));
-  expect(await screen.findByTitle("Missing value")).toHaveTextContent("(blank)");
-  expect(screen.getByText("Ada")).toBeInTheDocument();
+  expect(await screen.findByTitle("Missing value")).toHaveTextContent("Missing");
+  expect(screen.getByTitle("Blank value")).toHaveTextContent("Blank");
 });
 
 test("data tab and technical details show real metadata", async () => {
@@ -104,7 +116,7 @@ test("data tab and technical details show real metadata", async () => {
   await screen.findByRole("heading", { name: "customers" });
   await user.click(screen.getByRole("radio", { name: "Data" }));
   expect(screen.getAllByText("name").length).toBeGreaterThan(0);
-  expect(screen.getAllByText("text").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Text").length).toBeGreaterThan(0);
   await user.click(screen.getByRole("radio", { name: "Overview" }));
   await user.click(screen.getByText("Technical details"));
   expect(screen.getByText("customers.csv")).toBeInTheDocument();
@@ -128,7 +140,7 @@ test("delete confirmation names the dataset and returns to the list", async () =
   const user = userEvent.setup();
   renderApp([`/datasets/${sample.id}`]);
   await user.click(await screen.findByRole("button", { name: "Delete" }));
-  const dialog = await screen.findByRole("dialog", { name: "Delete dataset" });
+  const dialog = await screen.findByRole("dialog", { name: /delete/i });
   expect(dialog).toHaveTextContent("customers");
   expect(dialog).toHaveTextContent("customers.csv");
   await user.click(within(dialog).getByRole("button", { name: "Delete dataset" }));
@@ -147,17 +159,19 @@ test("dataset list API errors are visible", async () => {
   vi.stubGlobal("fetch", mockApi({ datasets: "error" }));
   renderApp(["/datasets"]);
   expect(
-    await screen.findByText("FACILIO can't reach the data service right now"),
+    await screen.findByText("FACILIO couldn't load your datasets."),
   ).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+  expect(screen.getAllByRole("button", { name: "Help" }).length).toBeGreaterThan(0);
 });
 
 test("unprofiled workspace offers analyze dataset", async () => {
   vi.stubGlobal("fetch", mockDatasetApi());
   renderApp([`/datasets/${sample.id}`]);
   expect(await screen.findByText("Not analyzed")).toBeInTheDocument();
-  expect(screen.getAllByRole("button", { name: "Analyze data" }).length).toBeGreaterThan(
-    0,
-  );
+  expect(
+    screen.getAllByRole("button", { name: "Analyze dataset" }).length,
+  ).toBeGreaterThan(0);
 });
 
 test("analyze dataset loads profile summary and quality", async () => {
@@ -165,19 +179,21 @@ test("analyze dataset loads profile summary and quality", async () => {
   const user = userEvent.setup();
   renderApp([`/datasets/${sample.id}`]);
   await screen.findByText("Not analyzed");
-  const analyzeButtons = screen.getAllByRole("button", { name: "Analyze data" });
+  const analyzeButtons = screen.getAllByRole("button", { name: "Analyze dataset" });
   const firstAnalyze = analyzeButtons[0];
   if (!firstAnalyze) {
-    throw new Error("Analyze data button missing");
+    throw new Error("Analyze dataset button missing");
   }
   await user.click(firstAnalyze);
   expect(await screen.findByText("86.4")).toBeInTheDocument();
-  expect(screen.getByText("Good")).toBeInTheDocument();
-  await user.click(screen.getByRole("radio", { name: "Problems" }));
-  expect(screen.getAllByText("Not assessed").length).toBeGreaterThan(0);
+  expect(screen.getByText(/Good/)).toBeInTheDocument();
   expect(screen.getByText("Completeness")).toBeInTheDocument();
+  expect(screen.getAllByText("Not assessed").length).toBeGreaterThan(0);
+  await user.click(screen.getByRole("radio", { name: "Problems" }));
+  expect(await screen.findByText(/Missing values in city/)).toBeInTheDocument();
   await user.click(screen.getByRole("radio", { name: "Data" }));
   expect(screen.getAllByText("Ada").length).toBeGreaterThan(0);
+  await user.click(screen.getByText("Column details"));
   const cityCells = screen.getAllByText("city");
   const explorerCity = cityCells[1] ?? cityCells[0];
   if (!explorerCity) {
@@ -185,8 +201,6 @@ test("analyze dataset loads profile summary and quality", async () => {
   }
   await user.click(explorerCity);
   expect(screen.getByText("Top values")).toBeInTheDocument();
-  await user.click(screen.getByRole("radio", { name: "Problems" }));
-  expect(await screen.findByText("Missing values")).toBeInTheDocument();
 });
 
 test("analyze dataset failure stays in the workspace", async () => {
@@ -194,10 +208,10 @@ test("analyze dataset failure stays in the workspace", async () => {
   const user = userEvent.setup();
   renderApp([`/datasets/${sample.id}`]);
   await screen.findByText("Not analyzed");
-  const analyzeButtons = screen.getAllByRole("button", { name: "Analyze data" });
+  const analyzeButtons = screen.getAllByRole("button", { name: "Analyze dataset" });
   const firstAnalyze = analyzeButtons[0];
   if (!firstAnalyze) {
-    throw new Error("Analyze data button missing");
+    throw new Error("Analyze dataset button missing");
   }
   await user.click(firstAnalyze);
   expect(await screen.findByText("We couldn't analyze this data")).toBeInTheDocument();
@@ -274,16 +288,18 @@ test("apply failure is shown after a successful preview", async () => {
   ).toBeInTheDocument();
 });
 
-test("version selector and history are available", async () => {
+test("version identity and history are available", async () => {
   vi.stubGlobal("fetch", mockDatasetApi());
   const user = userEvent.setup();
   renderApp([`/datasets/${sample.id}`]);
-  expect(await screen.findByLabelText("Version")).toBeInTheDocument();
-  expect(screen.getByRole("option", { name: /V1 — Original/i })).toBeInTheDocument();
+  expect(await screen.findByText("V1 — Original")).toBeInTheDocument();
   await user.click(screen.getByRole("radio", { name: "History" }));
   expect(await screen.findByLabelText("Version lineage")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Use this version" })).toBeEnabled();
-  await user.click(screen.getByText("Technical details"));
+  expect(screen.getByText("Currently using")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Use this version" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getAllByText("Technical details").at(-1) as HTMLElement);
   expect(screen.getByText("customers.csv")).toBeInTheDocument();
 });
 
@@ -313,5 +329,5 @@ test("dataset list shows the current version", async () => {
   vi.stubGlobal("fetch", mockDatasetApi());
   renderApp(["/datasets"]);
   expect(await screen.findByText("customers")).toBeInTheDocument();
-  expect(screen.getByText("V1")).toBeInTheDocument();
+  expect(screen.getByText("V1 Original")).toBeInTheDocument();
 });

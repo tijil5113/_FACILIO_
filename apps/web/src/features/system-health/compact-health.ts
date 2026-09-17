@@ -27,7 +27,7 @@ export function compactHealthFromChecks(args: {
     return {
       label: "Limited",
       tone: "warning",
-      detail: "Saved cleanups cannot run until the worker is available.",
+      detail: "Background processing is unavailable. Saved Cleanups cannot run.",
     };
   }
   if (args.healthSuccess) {

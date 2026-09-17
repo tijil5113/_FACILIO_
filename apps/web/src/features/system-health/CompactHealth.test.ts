@@ -12,7 +12,7 @@ describe("compactHealthFromChecks", () => {
       workerStatus: "unavailable",
     });
     expect(result.label).toBe("Limited");
-    expect(result.detail).toContain("Saved cleanups cannot run");
+    expect(result.detail).toContain("Background processing is unavailable");
   });
 
   test("is healthy only when API, queue, and worker are up", () => {

@@ -285,16 +285,13 @@ test("problems offers guided cleanup and preview stays non-destructive", async (
   expect(
     await screen.findByRole("heading", { name: "Ready to clean" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByText(/V2 — Cleaned version/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/V2 — Cleaned/i).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/V1 — Original/i).length).toBeGreaterThan(0);
   await user.click(screen.getByRole("button", { name: "Create cleaned version" }));
   expect(
     await screen.findByRole("heading", { name: "Cleanup complete" }),
   ).toBeInTheDocument();
-  expect(screen.getByText("Before")).toBeInTheDocument();
-  expect(screen.getByText("After")).toBeInTheDocument();
-  expect(screen.getByText("72.0")).toBeInTheDocument();
-  expect(screen.getByText("91.0")).toBeInTheDocument();
+  expect(screen.getByText("72.0 → 91.0")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Save these steps" })).toBeInTheDocument();
 });
 

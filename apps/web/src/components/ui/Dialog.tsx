@@ -9,13 +9,30 @@ interface DialogProps {
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  description?: string;
+  size?: "sm" | "md" | "lg";
 }
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function Dialog({ open, title, onClose, children, className }: DialogProps) {
+const sizes = {
+  sm: "max-w-[400px]",
+  md: "max-w-lg",
+  lg: "max-w-2xl",
+} as const;
+
+export function Dialog({
+  open,
+  title,
+  onClose,
+  children,
+  className,
+  description,
+  size = "md",
+}: DialogProps) {
   const titleId = useId();
+  const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
 
@@ -74,7 +91,7 @@ export function Dialog({ open, title, onClose, children, className }: DialogProp
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[10vh] sm:pt-[16vh]">
+    <div className="fixed inset-0 z-[var(--facilio-z-dialog)] flex items-start justify-center px-4 pt-[8vh] sm:pt-[12vh]">
       <button
         type="button"
         className="overlay-enter absolute inset-0 bg-[var(--facilio-overlay)]"
@@ -86,17 +103,55 @@ export function Dialog({ open, title, onClose, children, className }: DialogProp
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          "page-enter relative w-full max-w-lg rounded-[var(--facilio-radius-lg)] border border-line bg-raised shadow-[var(--facilio-shadow)]",
+          "page-enter relative w-full overflow-hidden rounded-[var(--facilio-radius-lg)] border border-line bg-raised shadow-[var(--facilio-shadow)]",
+          sizes[size],
           className,
         )}
       >
         <h2 id={titleId} className="sr-only">
           {title}
         </h2>
+        {description ? (
+          <p id={descriptionId} className="sr-only">
+            {description}
+          </p>
+        ) : null}
         {children}
       </div>
     </div>,
     document.body,
   );
+}
+
+export function DialogHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="border-b border-line px-5 py-4">
+      <h2 className="text-base font-semibold text-ink">{title}</h2>
+      {description ? (
+        <p className="type-body mt-1 text-ink-secondary">{description}</p>
+      ) : null}
+    </div>
+  );
+}
+
+export function DialogBody({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("space-y-4 px-5 py-4", className)}>{children}</div>;
+}
+
+export function DialogFooter({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap justify-end gap-2 px-5 pb-4">{children}</div>;
 }

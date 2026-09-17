@@ -50,13 +50,14 @@ apps/api/htmlcov/
 packages/processing/.coverage
 packages/processing/htmlcov/
 
-# Runtime and uploads
+# Runtime and uploads (matches repo-root runtime/ and apps/api/runtime/)
 uploads/
 runtime/
 tmp/
 temp/
 *.tmp
 *.log
+logs/
 .facilio/
 
 # Database
@@ -73,8 +74,9 @@ temp/
 .project
 .settings/
 
-# macOS
+# OS
 .DS_Store
+Thumbs.db
 .AppleDouble
 .LSOverride
 Icon
@@ -88,3 +90,6 @@ docker-compose.override.yml
 # Tooling caches
 .eslintcache
 .prettiercache
+
+# Generated Visual Mastery QA screenshot evidence (written reports stay tracked)
+docs/ux/vm*-evidence/

@@ -1,11 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, expect, test, vi } from "vitest";
 
 import { ErrorBoundary } from "@/app/ErrorBoundary";
 import { renderApp } from "@/app/test-utils";
-import { jobsListRefetchInterval } from "@/features/jobs/queries";
+import {
+  jobsListRefetchInterval,
+  operationsHealthRefetchInterval,
+} from "@/features/jobs/queries";
 import { PREFERENCES_STORAGE_KEY } from "@/lib/preferences";
 import { mockApi } from "./helpers";
 
@@ -25,7 +28,7 @@ test("error boundary offers try again and home", () => {
     </ErrorBoundary>,
   );
   expect(
-    screen.getByRole("heading", { name: "Something prevented this page from loading." }),
+    screen.getByRole("heading", { name: "This page couldn’t be shown" }),
   ).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Go Home" })).toBeInTheDocument();
@@ -38,7 +41,12 @@ test("route changes move focus to main content", async () => {
   await screen.findByRole("heading", {
     name: "Turn messy data into data you can understand and trust.",
   });
-  await user.click(screen.getByRole("link", { name: "Datasets" }));
+  await user.click(
+    within(screen.getByRole("navigation", { name: "Application" })).getByRole("link", {
+      name: /^datasets$/i,
+    }),
+  );
+  expect(await screen.findByRole("heading", { name: "Datasets" })).toBeInTheDocument();
   expect(document.getElementById("main-content")).toHaveFocus();
 });
 
@@ -60,4 +68,19 @@ test("activity list polling stops after terminal statuses", () => {
   expect(jobsListRefetchInterval([{ status: "FAILED" }, { status: "CANCELLED" }])).toBe(
     false,
   );
+});
+
+test("operations health polls faster when the worker is down", () => {
+  expect(
+    operationsHealthRefetchInterval({
+      worker: { status: "unavailable" },
+      queue: { status: "ready" },
+    }),
+  ).toBe(5000);
+  expect(
+    operationsHealthRefetchInterval({
+      worker: { status: "available" },
+      queue: { status: "ready" },
+    }),
+  ).toBe(15000);
 });

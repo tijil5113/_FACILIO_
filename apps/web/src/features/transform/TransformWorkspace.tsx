@@ -152,7 +152,7 @@ export function TransformWorkspace({
                         type="button"
                         className={`w-full rounded-[var(--facilio-radius-sm)] px-2 py-1.5 text-left text-sm ${
                           item.code === operationCode
-                            ? "bg-ink text-canvas dark:text-[#121410]"
+                            ? "bg-ink text-canvas"
                             : "text-ink hover:bg-subtle"
                         }`}
                         disabled={

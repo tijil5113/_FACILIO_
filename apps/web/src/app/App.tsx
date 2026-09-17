@@ -1,12 +1,12 @@
+import { useState } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router";
 
 import { ErrorBoundary } from "@/app/ErrorBoundary";
 import { AppProviders } from "@/app/providers";
 import { appRoutes } from "@/app/router";
 
-const router = createBrowserRouter(appRoutes);
-
 export function App() {
+  const [router] = useState(() => createBrowserRouter(appRoutes));
   return (
     <ErrorBoundary>
       <AppProviders>

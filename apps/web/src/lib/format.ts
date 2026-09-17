@@ -84,3 +84,18 @@ export function formatDuration(ms: number | null | undefined): string {
   const remainder = Math.round(seconds % 60);
   return `${String(minutes)}m ${String(remainder)}s`;
 }
+
+export function formatElapsedSince(
+  start: string | null | undefined,
+  end?: string | null,
+): string {
+  if (!start) {
+    return "—";
+  }
+  const from = new Date(start).getTime();
+  const to = end ? new Date(end).getTime() : Date.now();
+  if (Number.isNaN(from) || Number.isNaN(to) || to < from) {
+    return "—";
+  }
+  return formatDuration(to - from);
+}

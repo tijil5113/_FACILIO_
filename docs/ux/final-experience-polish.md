@@ -4,7 +4,7 @@ Implementation notes for motion, accessibility, responsive layout, and performan
 
 ## Motion
 
-Tokens: `--facilio-duration-fast` (~120ms), `--facilio-duration-standard` / `--facilio-duration-base` (~200ms), `--facilio-duration-deliberate` (~280ms), `--facilio-ease`.
+Tokens: `--facilio-duration-instant` (0ms), `--facilio-duration-fast` / `micro` (120ms), `--facilio-duration-control` (160ms), `--facilio-duration-surface` / `--facilio-duration-content` / `--facilio-duration-standard` / `--facilio-duration-base` (200ms), `--facilio-duration-relationship` / `--facilio-duration-deliberate` / `--facilio-duration-emphasized` (280ms), `--facilio-ease`.
 
 Used for orientation (page/drawer enter), selection feedback, and running-status pulse. No ambient loops on completed work. No animation library was added.
 
@@ -21,7 +21,7 @@ Reduced motion: Settings → Reduced, or OS `prefers-reduced-motion` when Motion
 
 ## Responsive
 
-- Home CTAs stack; journey remains a compact step list
+- Home CTAs stack; first-run hero places actions before the signature visual; How FACILIO works becomes a vertical sequence below `lg`
 - Dataset tabs scroll horizontally instead of wrapping
 - Data preview may use a wider max width than explanatory pages
 - Guided Cleanup stacks; approval CTA stays in flow

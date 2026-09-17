@@ -214,14 +214,13 @@ test("jobs page lists operational executions", async () => {
   renderApp(["/jobs"]);
   expect(await screen.findByText("Customer Data Cleanup")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Activity" })).toBeInTheDocument();
-  expect(screen.getByText("2 of 4 steps complete")).toBeInTheDocument();
   expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
 });
 
 test("job detail shows real step progress and cancel", async () => {
   const user = userEvent.setup();
   renderApp(["/jobs/11111111-1111-4111-8111-111111111111"]);
-  expect(await screen.findByText("Steps")).toBeInTheDocument();
+  expect(await screen.findByText("Steps that ran")).toBeInTheDocument();
   expect(screen.getAllByText(/2 of 4 steps complete/).length).toBeGreaterThan(0);
   expect(screen.getByText(/remove extra spaces/i)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Cancel cleanup" }));
@@ -259,10 +258,11 @@ test("activity list shows cleaned version when analysis failed", async () => {
     ),
   );
   renderApp(["/jobs"]);
-  expect(
-    await screen.findByText("V2 created · Analysis needs attention"),
-  ).toBeInTheDocument();
+  expect(await screen.findByText("Cleaned version created")).toBeInTheDocument();
+  expect(screen.getByText("Analysis needs attention")).toBeInTheDocument();
+  expect(screen.getByText("V2")).toBeInTheDocument();
   expect(screen.queryByText("No new version")).not.toBeInTheDocument();
+  expect(screen.queryByText("Couldn't create cleaned version")).not.toBeInTheDocument();
 });
 
 test("activity detail keeps open cleaned version after analysis failure", async () => {
@@ -282,4 +282,104 @@ test("activity detail keeps open cleaned version after analysis failure", async 
   renderApp(["/jobs/11111111-1111-4111-8111-111111111111"]);
   expect(await screen.findByText("Open cleaned version")).toBeInTheDocument();
   expect(screen.getByText("Retry analysis")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Compare versions" })).toBeInTheDocument();
+});
+
+test("failed activity does not claim a version was created", async () => {
+  vi.stubGlobal(
+    "fetch",
+    mockJobsApi(
+      jobSummary({
+        status: "FAILED",
+        output_version_id: null,
+        output_version_number: null,
+        error_code: "COLUMN_NOT_FOUND",
+        error_message_safe: "Column status was not found.",
+        retryable: false,
+        current_activity: null,
+        progress: { current: 0, total: 2, label: "0 of 2 steps complete" },
+      }),
+    ),
+  );
+  renderApp(["/jobs"]);
+  expect(await screen.findByText("Couldn't create cleaned version")).toBeInTheDocument();
+  expect(screen.queryByText("Cleaned version created")).not.toBeInTheDocument();
+});
+
+test("activity detail tells an execution story from real timestamps", async () => {
+  vi.stubGlobal(
+    "fetch",
+    mockJobsApi(
+      jobSummary({
+        status: "SUCCEEDED",
+        output_version_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        output_version_number: 2,
+        output_profile_status: "READY",
+        completed_at: now,
+        current_activity: "Done",
+        progress: { current: 4, total: 4, label: "4 of 4 steps complete" },
+      }),
+    ),
+  );
+  renderApp(["/jobs/11111111-1111-4111-8111-111111111111"]);
+  expect(await screen.findByRole("heading", { name: "Execution" })).toBeInTheDocument();
+  expect(screen.getByText("Requested")).toBeInTheDocument();
+  expect(screen.getByText("Started")).toBeInTheDocument();
+  expect(screen.getByText("Completed")).toBeInTheDocument();
+  expect(screen.getByText(/Cleanup definition at execution time/)).toBeInTheDocument();
+  expect(screen.getByText("Technical details")).toBeInTheDocument();
+});
+
+test("retry is not offered when output already exists", async () => {
+  vi.stubGlobal(
+    "fetch",
+    mockJobsApi(
+      jobSummary({
+        status: "FAILED",
+        retryable: true,
+        output_version_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        output_version_number: 2,
+        output_profile_status: "FAILED",
+      }),
+    ),
+  );
+  renderApp(["/jobs/11111111-1111-4111-8111-111111111111"]);
+  expect(await screen.findByText("Open cleaned version")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Retry cleanup" })).not.toBeInTheDocument();
+});
+
+test("queued activity with an unavailable worker is not presented as waiting", async () => {
+  const fetchMock = mockJobsApi(
+    jobSummary({
+      status: "QUEUED",
+      started_at: null,
+      current_activity: "Waiting for worker",
+      progress: { current: 0, total: 2, label: "0 of 2 steps complete" },
+    }),
+  );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const path = pathnameOf(requestUrl(input));
+      if (path === "/api/v1/operations/health") {
+        return jsonResponse({
+          success: true,
+          data: {
+            queue: {
+              status: "ready",
+              backend: "redis",
+              queued_count: 1,
+              name: "workflows",
+            },
+            worker: { status: "unavailable", available_count: 0, last_seen_at: null },
+            jobs: { queued: 1, running: 0, failed: 0, succeeded: 0 },
+          },
+        });
+      }
+      return fetchMock(input, init);
+    }),
+  );
+  renderApp(["/jobs"]);
+  expect(await screen.findByText(/can't start right now/i)).toBeInTheDocument();
+  expect(screen.queryByText("Waiting to start")).not.toBeInTheDocument();
 });

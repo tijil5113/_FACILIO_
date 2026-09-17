@@ -11,8 +11,8 @@ export function TechnicalDetails({
 }: TechnicalDetailsProps) {
   return (
     <details className="rounded-[var(--facilio-radius-md)] border border-line bg-surface px-4 py-3">
-      <summary className="cursor-pointer text-sm font-medium text-ink">{summary}</summary>
-      <div className="mt-3 text-sm leading-6 text-ink-secondary">{children}</div>
+      <summary className="type-card-title cursor-pointer text-ink">{summary}</summary>
+      <div className="type-body-sm mt-3 space-y-2 text-ink-secondary">{children}</div>
     </details>
   );
 }

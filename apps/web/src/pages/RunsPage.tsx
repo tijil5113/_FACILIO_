@@ -4,10 +4,11 @@ import { Link } from "react-router";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
 import { useWorkflowRunsQuery } from "@/features/workflows/queries";
 import { formatCount, formatDateTime } from "@/lib/format";
+import { jobStatusLabel } from "@/lib/status-labels";
 import type { WorkflowRunStatus } from "@/types/workflows";
 
 export function RunsPage() {
@@ -34,15 +35,15 @@ export function RunsPage() {
           }}
         >
           <option value="">All</option>
-          <option value="QUEUED">Queued</option>
+          <option value="QUEUED">Waiting</option>
           <option value="RUNNING">Running</option>
-          <option value="SUCCEEDED">Succeeded</option>
-          <option value="FAILED">Failed</option>
+          <option value="SUCCEEDED">Completed</option>
+          <option value="FAILED">Needs attention</option>
           <option value="CANCELLED">Cancelled</option>
         </select>
       </label>
       {list.isLoading ? (
-        <Skeleton className="h-64 w-full" />
+        <TableSkeleton rows={5} />
       ) : list.isError ? (
         <Callout tone="danger" title="Runs unavailable">
           {list.error instanceof Error
@@ -52,11 +53,11 @@ export function RunsPage() {
       ) : (
         <div className="overflow-hidden rounded-[var(--facilio-radius-md)] border border-line">
           <table className="w-full text-left text-sm">
-            <caption className="sr-only">Workflow runs</caption>
+            <caption className="sr-only">Cleanup run records</caption>
             <thead className="bg-subtle font-mono text-[11px] tracking-[0.08em] text-ink-muted uppercase">
               <tr>
                 <th className="px-4 py-2 font-medium">Run</th>
-                <th className="px-4 py-2 font-medium">Workflow</th>
+                <th className="px-4 py-2 font-medium">Cleanup</th>
                 <th className="px-4 py-2 font-medium">Dataset</th>
                 <th className="px-4 py-2 font-medium">Versions</th>
                 <th className="px-4 py-2 font-medium">Status</th>
@@ -98,7 +99,7 @@ export function RunsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusIndicator
-                        label={item.status.replaceAll("_", " ")}
+                        label={jobStatusLabel(item.status)}
                         tone={
                           item.status === "SUCCEEDED"
                             ? "success"

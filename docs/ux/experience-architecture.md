@@ -10,18 +10,18 @@ Grounded in Phase 8A-1 and current code: `app/router.tsx`, `lib/navigation.ts`, 
 
 ## 1. Executive decisions (locked)
 
-1. **Primary nav:** Home, Datasets, Cleanups, Activity, Settings. Learn only when 8D exists. **Exports and Data Quality leave primary nav.** Runs leave primary nav.
+1. **Primary nav:** Home, Datasets, Cleanups, Activity, Learn, Settings. **Exports and Data Quality leave primary nav.** Runs leave primary nav.
 2. **Runs + Jobs:** One user event **Activity**. Database models stay separate. UI composes Job (operations) + WorkflowRun (domain). Default list/detail = `/jobs`. `/runs` remains, unlinked.
 3. **Dataset workspace:** Overview, Data, Problems, Clean, History. Quality is a **summary**, Problems is the **action list**. Source/column physics → More / Technical details. Analyze is primary until analyzed; Clean is not the first header CTA.
 4. **Quality vs Problems:** Quality = how healthy evidence looks. Problems = what to fix. Same profile. Score never equals business truth.
 5. **Clean vs Transform:** L1/L2 primary verb **Clean**. “Transformation” is standard/help. Codes are L3.
 6. **Workflow vs Saved cleanup:** Nav **Cleanups**. First teach “saved cleanup.” **Workflow** remains the standard/technical name (routes, APIs, Learn advanced).
 7. **Versions:** Keep Vn. Labels: Original, Cleaned version, Using this version, Viewing. CTA **Use this version**. Parent → Previous version. Lineage L3.
-8. **Home:** Goal + start/continue. Health compact when healthy. No API/SQLAlchemy/Redis capability grid as the story.
+8. **Home:** Public `/` is discovery. Application Home remains `/overview` (start/continue). Health compact when healthy. No API/SQLAlchemy/Redis capability grid as the story. `/login` and `/signup` are visual preparation only — authentication is not implemented.
 9. **First-run:** Upload or optional labeled sample. **Never auto-apply cleanup.** **8B:** auto-start **analysis** after successful upload (inspect-only) with visible Analyzing state.
 10. **Sample:** Real engine via normal upload/profile/transform/workflow/job APIs. Clearly labeled. Deletable. No fake scores.
-11. **Help:** Contextual panel, page-aware. Shell+content in **8E**. Not a fake 8A-3 empty Help that looks broken.
-12. **Learn:** `/learn` in **8D**, product CTAs into real routes. Not a README dump.
+11. **Help:** Contextual drawer, page-aware. Question first, then actions, Learn more, optional Technical details.
+12. **Learn:** `/learn` hub plus one module at a time, with real product CTAs. Not a README dump.
 13. **Advanced pattern:** “Technical details” disclosure per page. Not a second app.
 14. **Exports:** Hidden until implemented.
 15. **System health:** `CompactHealth` always. Full panel in Settings and on **degraded** Home. Home healthy ≠ architecture dashboard.
@@ -175,7 +175,8 @@ Not a mandatory tour.
 
 | Step | Automatic? | Never automatic |
 | --- | --- | --- |
-| Land Home | Redirect `/` → `/overview` stays | Forced modal tour |
+| Land public Home | `/` is the public landing | Forced modal tour |
+| Open FACILIO | User → `/overview` | Treat public Home as the workspace |
 | Upload or sample | User | Silent demo as “your” data |
 | Analysis | **8B: start after upload**, visible | Hidden analysis |
 | Open Problems | Prompt after analysis | Skip problems |
@@ -356,29 +357,30 @@ See [language-system.md](language-system.md) and CTA table in [navigation-bluepr
 
 ## 26–28. Help, Learn, onboarding
 
-### Help (8E)
+### Help
 
-- Entry: context bar **Help** (also `?` shortcut later).  
-- Desktop: side panel. Mobile: full-screen sheet.  
-- Page-aware from route.  
-- No search required in v1; optional later.  
-- Links to Learn modules when 8D exists.  
-- Structure: What is this page / What can I do / Common questions / Quick actions / Learn more / Technical details.  
+- Entry: context bar **Help**.
+- Desktop: right drawer. Mobile: full-height panel.
+- Page-aware from route and dataset tab.
+- No search.
+- Links to the matching Learn module.
+- Structure: question → short answer → What you can do → Good to know → Learn more → Technical details.  
 
 ### Learn (8D) `/learn`
 
 Not a copied README.
 
-| Module | Goal | Depth | Interactive | Product CTA | Advanced |
-| --- | --- | --- | --- | --- | --- |
-| Getting started | What FACILIO is | 2 min | Sample | Upload / Try sample | — |
-| Your data | Upload ≠ clean | Short | Source vs preview | Open Datasets | encoding |
-| Quality | Score ≠ truth | Short | Not analyzed vs assessed | Open Problems | weights |
-| Cleaning | Preview vs create version | Short | Trim example | Clean | codes |
-| Versions | Original kept | Short | Timeline | History | lineage |
-| Saved cleanups | Recipe vs activity | Short | — | New cleanup | revision |
-| Activity | Background run | Short | — | Activity | job/run IDs |
-| First cleanup | E2E | 5 min | Sample path | Start | — |
+| Module | Goal | Product CTA |
+| --- | --- | --- |
+| FACILIO in a minute | Bring → analyze → review → preview → create → reuse | Try FACILIO |
+| Bring in your data | CSV, Excel, JSON and the upload limit | Open Datasets |
+| Understand your dataset | Analyze measures; it does not rewrite | Open Datasets |
+| Understand data quality | Score ≠ correctness; Integrity not assessed | Try FACILIO |
+| Review problems | Findings with evidence; some are informational | Try FACILIO |
+| Clean safely | Review → Choose → Preview → Create | Try FACILIO |
+| Understand versions | Original, Viewing, Using; lineage | Try FACILIO |
+| Reuse a Cleanup | Ordered steps you can run again | Open Cleanups |
+| Follow Activity | Waiting, Running, Completed, Needs attention | View Activity |
 
 ### Contextual onboarding (not a blocking tour)
 
@@ -398,7 +400,7 @@ Store dismissals in existing **local** preferences (`preferences-store`), not a 
 
 ## 29–32. Commands, advanced, health, exports
 
-See navigation blueprint. Health: Compact always; full in Settings; degraded Home. Exports hidden.
+See navigation blueprint. Health: Compact always; full in Settings; degraded Home. Exports remain unlinked and unavailable.
 
 ---
 

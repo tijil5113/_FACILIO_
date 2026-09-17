@@ -25,6 +25,16 @@ export function jobsListRefetchInterval(
   return items.some((item) => isActiveJobStatus(item.status)) ? 2000 : false;
 }
 
+export function operationsHealthRefetchInterval(health?: {
+  worker: { status: string };
+  queue: { status: string };
+}): number {
+  if (health?.worker.status === "unavailable" || health?.queue.status === "unavailable") {
+    return 5000;
+  }
+  return 15000;
+}
+
 export function useJobsQuery(filters: JobFilters, enabled = true) {
   const key = JSON.stringify(filters);
   return useQuery({
@@ -60,6 +70,7 @@ export function useOperationsHealthQuery() {
     queryKey: jobKeys.operations,
     queryFn: fetchOperationsHealth,
     retry: false,
+    refetchInterval: (query) => operationsHealthRefetchInterval(query.state.data),
   });
 }
 

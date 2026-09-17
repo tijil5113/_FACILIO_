@@ -20,13 +20,14 @@ FACILIO does **not** export cleaned files, authenticate users, schedule jobs, or
 
 ## Product walkthrough
 
-1. **Home** — empty, sample-only, or returning states. Upload your file or try the bundled customer sample.
-2. **Dataset Overview / Data / Problems** — inspect the current version and its issues.
-3. **Guided Cleanup** — select compatible fixes, preview the sequential result, apply. Apply runs in the API process and creates one derived version.
-4. **History** — lineage, viewing vs using, compare with parent.
-5. **Cleanups** — save the steps and run them again. Saved runs are asynchronous (Redis/RQ + worker).
-6. **Activity** — job truth: waiting, running, created version, or no new version. Analysis failure after a created version is shown separately.
-7. **Learn / Help / Settings** — product language, help, theme and motion.
+1. **Public Home (`/`)** — what FACILIO is, the messy→cleaned signature, and Open FACILIO / Try the sample. Sign in / Create account are visual preparation only; authentication is not implemented.
+2. **Application Home (`/overview`)** — empty, sample-only, or returning states. Upload your file or try the bundled customer sample.
+3. **Dataset Overview / Data / Problems** — inspect the current version and its issues.
+4. **Guided Cleanup** — select compatible fixes, preview the sequential result, apply. Apply runs in the API process and creates one derived version.
+5. **History** — lineage, viewing vs using, compare with parent.
+6. **Cleanups** — save the steps and run them again. Saved runs are asynchronous (Redis/RQ + worker).
+7. **Activity** — job truth: waiting, running, created version, or no new version. Analysis failure after a created version is shown separately.
+8. **Learn / Help / Settings** — product education, contextual Help, appearance, and truthful system status.
 
 ## Architecture
 
@@ -82,11 +83,11 @@ Activity maps real Job + output-version state:
 
 | State | Label |
 | --- | --- |
-| Succeeded + output + profile ready | `V2 created` |
-| Succeeded + output + profile failed | `V2 created · Analysis needs attention` |
-| Failed / cancelled, no output | `No new version` |
-| Queued | `Waiting to start` |
-| Running | Current step / progress |
+| Succeeded + output + profile ready | Completed · cleaned version created |
+| Succeeded + output + profile failed | Cleaned version created · Analysis needs attention |
+| Failed / cancelled, no output | Needs attention / no cleaned version |
+| Queued | Waiting |
+| Running | Running |
 
 `output_version_id` is the evidence that a durable version exists, not Job status alone.
 

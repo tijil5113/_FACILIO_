@@ -9,7 +9,7 @@ export function versionTrustLabel(version: VersionLike): string {
   if (version.kind === "ORIGINAL" || version.version_number === 1) {
     return "Original";
   }
-  return "Cleaned version";
+  return "Cleaned";
 }
 
 export function versionHeadline(version: VersionLike): string {

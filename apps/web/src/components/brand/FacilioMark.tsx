@@ -1,14 +1,15 @@
 import { cn } from "@/lib/cn";
 
 interface FacilioMarkProps {
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
 const sizes = {
   sm: 20,
-  md: 28,
+  md: 24,
   lg: 40,
+  xl: 48,
 } as const;
 
 export function FacilioMark({ size = "md", className }: FacilioMarkProps) {
@@ -40,13 +41,13 @@ interface FacilioWordmarkProps {
 export function FacilioWordmark({ compact = false, className }: FacilioWordmarkProps) {
   return (
     <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
-      <FacilioMark size={compact ? "sm" : "md"} />
+      <FacilioMark size="sm" />
       <div className="min-w-0">
-        <p className="font-sans text-[13px] font-semibold tracking-[0.18em] text-sidebar-ink">
+        <p className="font-sans text-[13px] font-semibold tracking-[0.14em] text-sidebar-ink">
           FACILIO
         </p>
         {compact ? null : (
-          <p className="truncate font-mono text-[10px] tracking-[0.14em] text-sidebar-muted uppercase">
+          <p className="truncate font-mono text-[10px] tracking-[0.12em] text-sidebar-muted uppercase">
             Data operations
           </p>
         )}

@@ -15,7 +15,7 @@ test("home renders the product goal", async () => {
   expect(
     await screen.findByText("Turn messy data into data you can understand and trust."),
   ).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Upload my data" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Upload your data" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "Try FACILIO" })).toBeEnabled();
   expect(
     screen.queryByText("Intelligent Data Operations Platform"),
@@ -53,7 +53,7 @@ test("home shows degraded health when the API cannot be reached", async () => {
   });
   expect(
     screen.getByRole("heading", {
-      name: "FACILIO cannot reach the data service right now.",
+      name: "FACILIO can’t load your workspace right now.",
     }),
   ).toBeInTheDocument();
   expect(screen.queryByText("Operational")).not.toBeInTheDocument();
@@ -64,16 +64,20 @@ test("settings shows detailed system status and retry", async () => {
   vi.stubGlobal("fetch", fetchMock);
   const user = userEvent.setup();
   renderApp(["/settings"]);
-  expect(await screen.findByText("Operational")).toBeInTheDocument();
-  expect(screen.getByText("Ready")).toBeInTheDocument();
-  expect(screen.getByText("0.1.0")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Retry" }));
+  expect(
+    await screen.findByRole("heading", { name: "System status" }),
+  ).toBeInTheDocument();
+  expect(await screen.findAllByText("Available")).not.toHaveLength(0);
+  expect(screen.getAllByText("0.1.0").length).toBeGreaterThan(0);
+  await user.click(screen.getByRole("button", { name: "Refresh status" }));
   expect(fetchMock.mock.calls.length).toBeGreaterThan(2);
 });
 
 test("settings reports an unconfigured database from readiness", async () => {
   vi.stubGlobal("fetch", mockApi({ readiness: "not_ready" }));
   renderApp(["/settings"]);
-  expect(await screen.findByText("Operational")).toBeInTheDocument();
-  expect(screen.getAllByText("Not configured").length).toBeGreaterThanOrEqual(1);
+  expect(
+    await screen.findByRole("heading", { name: "System status" }),
+  ).toBeInTheDocument();
+  expect(await screen.findAllByText("Limited")).not.toHaveLength(0);
 });

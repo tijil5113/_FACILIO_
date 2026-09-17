@@ -1,22 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { TechnicalDetails } from "@/components/ui/TechnicalDetails";
+import { CleanEntry } from "@/features/datasets/CleanEntry";
+import { DatasetHeader } from "@/features/datasets/DatasetHeader";
+import { DatasetOverview } from "@/features/datasets/DatasetOverview";
+import { DatasetProblems } from "@/features/datasets/DatasetProblems";
 import { DeleteDialog } from "@/features/datasets/DeleteDialog";
-import { ResourceNotFound } from "@/features/recovery/ResourceNotFound";
-import { RecoveryMessage } from "@/features/recovery/RecoveryMessage";
-import {
-  analyzeFailureExperience,
-  mapRecoveryError,
-} from "@/features/recovery/map-error";
-import { DisabledHint } from "@/components/ui/DisabledHint";
 import { PreviewGrid } from "@/features/datasets/PreviewGrid";
 import { RenameDialog } from "@/features/datasets/RenameDialog";
 import {
@@ -27,23 +21,31 @@ import {
   useDatasetProfileQuery,
   useProfileDatasetMutation,
   useRenameDatasetMutation,
+  useSetCurrentVersionMutation,
 } from "@/features/datasets/queries";
+import {
+  resolveAnalysisState,
+  resolveWorkspacePrimary,
+  viewingDiffersFromUsing,
+  analysisStateLabel,
+} from "@/features/datasets/workspace-state";
 import { GuidedCleanup } from "@/features/cleanup/GuidedCleanup";
 import { HistoryPanel } from "@/features/transform/HistoryPanel";
 import { TransformWorkspace } from "@/features/transform/TransformWorkspace";
 import { ColumnExplorer } from "@/features/profile/ColumnExplorer";
-import { DimensionCards } from "@/features/profile/DimensionCards";
-import { IssuesPanel } from "@/features/profile/IssuesPanel";
-import { MissingnessChart } from "@/features/profile/MissingnessChart";
-import { QualityHero } from "@/features/profile/QualityHero";
 import { FirstUseCue } from "@/features/onboarding/FirstUseCue";
-import { LearnMoreLink } from "@/features/learn/LearnMoreLink";
+import { ResourceNotFound } from "@/features/recovery/ResourceNotFound";
+import { RecoveryMessage } from "@/features/recovery/RecoveryMessage";
+import {
+  analyzeFailureExperience,
+  mapRecoveryError,
+} from "@/features/recovery/map-error";
+import { columnTypeLabel } from "@/features/datasets/dtype-labels";
+import { fileFormatLabel } from "@/features/datasets/file-format";
 import { cn } from "@/lib/cn";
-import { formatCount, formatDateTime, formatFileSize, formatPercent } from "@/lib/format";
-import { datasetStatusLabel, profileStatusLabel } from "@/lib/status-labels";
-import { versionSelectLabel } from "@/lib/version-labels";
+import { formatDateTime, formatFileSize } from "@/lib/format";
+import { useContextTitle } from "@/hooks/use-context-title";
 import { useUiStore } from "@/stores/ui-store";
-import type { DatasetProfile } from "@/types/profile";
 
 type WorkspaceTab = "overview" | "data" | "problems" | "clean" | "history" | "cleanup";
 
@@ -69,7 +71,6 @@ export function DatasetWorkspacePage() {
   const { datasetId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const setContextTitle = useUiStore((state) => state.setContextTitle);
   const showNotice = useUiStore((state) => state.showNotice);
   const announce = useUiStore((state) => state.announce);
   const [tab, setTab] = useState<WorkspaceTab>(() => tabFromSearch(searchParams));
@@ -102,15 +103,8 @@ export function DatasetWorkspacePage() {
   const profileMutation = useProfileDatasetMutation(datasetId ?? "", selectedVersionId);
   const renameMutation = useRenameDatasetMutation(datasetId ?? "");
   const deleteMutation = useDeleteDatasetMutation();
-
-  useEffect(() => {
-    if (datasetQuery.data?.name) {
-      setContextTitle(datasetQuery.data.name);
-    }
-    return () => {
-      setContextTitle(null);
-    };
-  }, [datasetQuery.data?.name, setContextTitle]);
+  const restoreVersion = useSetCurrentVersionMutation(datasetId ?? "");
+  useContextTitle(datasetQuery.data?.name ?? null);
 
   useEffect(() => {
     setTab(tabFromSearch(searchParams));
@@ -174,10 +168,10 @@ export function DatasetWorkspacePage() {
 
   if (datasetQuery.isLoading) {
     return (
-      <div className="page-enter mx-auto max-w-5xl space-y-4" aria-busy="true">
+      <div className="page-enter content-workspace mx-auto space-y-4" aria-busy="true">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-96" />
-        <Skeleton className="h-64 w-full" />
+        <TableSkeleton rows={6} />
       </div>
     );
   }
@@ -193,12 +187,24 @@ export function DatasetWorkspacePage() {
 
   const profile = profileQuery.data ?? null;
   const analyzing = profileMutation.isPending || profile?.status === "PROFILING";
-  const analyzed = profile?.status === "READY";
-  const analysisFailed = profile?.status === "FAILED" || profileMutation.isError;
-  const hasProblems = analyzed && profile.issue_counts.total > 0;
-  const selectedVersion = versionsQuery.data?.find(
-    (item) => item.id === selectedVersionId,
+  const analysis = resolveAnalysisState({
+    profile,
+    analyzing,
+    mutationFailed: profileMutation.isError,
+  });
+  const versions = Array.isArray(versionsQuery.data) ? versionsQuery.data : [];
+  const selectedVersion = versions.find((item) => item.id === selectedVersionId);
+  const usingVersion = versions.find((item) => item.is_current);
+  const viewingDifferent = viewingDiffersFromUsing(
+    selectedVersionId,
+    dataset.current_version_id,
   );
+  const primary = resolveWorkspacePrimary({
+    analysis,
+    viewingDifferent,
+    datasetReady: dataset.status === "ready",
+  });
+  const problemCount = profile?.issue_counts.total ?? 0;
 
   function goToTab(next: WorkspaceTab) {
     setTab(next);
@@ -209,6 +215,12 @@ export function DatasetWorkspacePage() {
       params.set("tab", next);
     }
     setSearchParams(params, { replace: true });
+  }
+
+  function setVersion(versionId: string) {
+    const next = new URLSearchParams(searchParams);
+    next.set("version", versionId);
+    setSearchParams(next);
   }
 
   function runAnalyze() {
@@ -225,143 +237,63 @@ export function DatasetWorkspacePage() {
     });
   }
 
-  const primaryActions = (
-    <div className="flex flex-wrap gap-2">
-      {!analyzed || analysisFailed ? (
-        <DisabledHint
-          disabled={analyzing || dataset.status !== "ready"}
-          reason={
-            analyzing
-              ? "Analysis is already running."
-              : dataset.status !== "ready"
-                ? "This dataset is not ready to analyze yet."
-                : undefined
-          }
-        >
-          <Button onClick={runAnalyze} disabled={analyzing || dataset.status !== "ready"}>
-            {analysisFailed
-              ? "Retry analysis"
-              : analyzing
-                ? "Analyzing…"
-                : "Analyze data"}
-          </Button>
-        </DisabledHint>
-      ) : null}
-      {analyzed && hasProblems ? (
-        <Button
-          onClick={() => {
-            goToTab("cleanup");
-          }}
-        >
-          Clean these problems
-        </Button>
-      ) : null}
-      {analyzed ? (
-        <Button
-          variant={hasProblems ? "secondary" : "primary"}
-          onClick={() => {
-            goToTab("clean");
-          }}
-          disabled={dataset.status !== "ready" || !selectedVersionId}
-        >
-          Clean data
-        </Button>
-      ) : (
-        <Button
-          variant="secondary"
-          onClick={() => {
-            goToTab("clean");
-          }}
-          disabled={dataset.status !== "ready" || !selectedVersionId}
-        >
-          Clean data
-        </Button>
-      )}
-      <Button
-        variant="ghost"
-        onClick={() => {
-          setRenameOpen(true);
-        }}
-      >
-        Rename
-      </Button>
-      <Button
-        variant="ghost"
-        onClick={() => {
-          setDeleteOpen(true);
-        }}
-      >
-        Delete
-      </Button>
-    </div>
-  );
+  function applyThisVersion() {
+    if (!selectedVersionId) {
+      return;
+    }
+    restoreVersion.mutate(selectedVersionId, {
+      onSuccess: () => {
+        showNotice("Using this version. Later versions are kept.");
+      },
+    });
+  }
+
+  function handlePrimary() {
+    if (primary.kind === "analyze" || primary.kind === "retry-analyze") {
+      runAnalyze();
+      return;
+    }
+    if (primary.kind === "review-problems") {
+      goToTab("problems");
+      return;
+    }
+    if (primary.kind === "view-data") {
+      goToTab("data");
+      return;
+    }
+    if (primary.kind === "use-version") {
+      applyThisVersion();
+    }
+  }
+
+  const visibleTab: Exclude<WorkspaceTab, "cleanup"> = tab === "cleanup" ? "clean" : tab;
 
   return (
     <div
       className={cn(
         "page-enter mx-auto w-full space-y-6",
-        tab === "data" ? "content-workspace" : "max-w-5xl",
+        tab === "data" ? "content-fluid" : "content-workspace",
       )}
     >
-      <PageHeader
-        eyebrow="Dataset"
-        title={dataset.name}
-        description="Understand this data, find problems, and clean it without changing the original."
-        actions={primaryActions}
+      <DatasetHeader
+        dataset={dataset}
+        versions={versionsQuery.data}
+        selectedVersion={selectedVersion}
+        selectedVersionId={selectedVersionId}
+        viewingDifferent={viewingDifferent}
+        usingVersion={usingVersion}
+        analysisLabel={analysisStateLabel(profile?.status ?? dataset.profile_status)}
+        primary={primary}
+        analyzing={analyzing}
+        onVersionChange={setVersion}
+        onPrimary={handlePrimary}
+        onRename={() => {
+          setRenameOpen(true);
+        }}
+        onDelete={() => {
+          setDeleteOpen(true);
+        }}
       />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge>{dataset.file_type.toUpperCase()}</Badge>
-        {dataset.is_sample ? (
-          <Badge tone="info" aria-label="Sample dataset">
-            Sample
-          </Badge>
-        ) : null}
-        <Badge
-          tone={
-            dataset.status === "ready"
-              ? "success"
-              : dataset.status === "failed"
-                ? "danger"
-                : "warning"
-          }
-        >
-          {datasetStatusLabel(dataset.status)}
-        </Badge>
-        <span className="text-sm text-ink-secondary">
-          {formatCount(dataset.row_count)} rows · {formatCount(dataset.column_count)}{" "}
-          columns
-        </span>
-        {dataset.version_count > 1 ? (
-          <span className="text-sm text-ink-secondary">
-            · {formatCount(dataset.version_count)} versions
-          </span>
-        ) : null}
-      </div>
-
-      {versionsQuery.data && selectedVersionId ? (
-        <label className="block max-w-lg text-xs font-medium text-ink-secondary">
-          Version
-          <select
-            className="mt-1 h-9 w-full rounded-[var(--facilio-radius-md)] border border-line bg-raised px-2 text-sm text-ink"
-            value={selectedVersionId}
-            onChange={(event) => {
-              const next = new URLSearchParams(searchParams);
-              next.set("version", event.target.value);
-              setSearchParams(next);
-            }}
-          >
-            {versionsQuery.data.map((version) => (
-              <option key={version.id} value={version.id}>
-                {versionSelectLabel(version, {
-                  viewing: version.id === selectedVersionId,
-                })}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      <p className="text-sm text-ink-secondary">Your original is preserved.</p>
 
       {dataset.is_sample ? (
         <Callout
@@ -384,13 +316,15 @@ export function DatasetWorkspacePage() {
         </Callout>
       ) : null}
 
-      {fromNewUpload && !dataset.is_sample && (analyzing || !analyzed) ? (
+      {fromNewUpload &&
+      !dataset.is_sample &&
+      (analyzing || analysis === "not_analyzed") ? (
         <Callout tone="success" title="Dataset created">
           <p>Your original file is preserved.</p>
           <p className="mt-1" role="status">
             {analyzing
               ? "FACILIO is analyzing the data."
-              : analysisFailed
+              : analysis === "failed"
                 ? "Your uploaded data is still available and unchanged."
                 : "FACILIO stored this file without changing values."}
           </p>
@@ -400,7 +334,7 @@ export function DatasetWorkspacePage() {
         </Callout>
       ) : null}
 
-      {analysisOutcome === "problems" && analyzed ? (
+      {analysisOutcome === "problems" && analysis === "analyzed_with_problems" ? (
         <Callout
           tone="success"
           title="Analysis complete"
@@ -416,15 +350,14 @@ export function DatasetWorkspacePage() {
           }
         >
           <p role="status">
-            FACILIO checked this version and found{" "}
-            {formatCount(profile.issue_counts.total)}{" "}
-            {profile.issue_counts.total === 1 ? "thing" : "things"} worth reviewing.
+            FACILIO checked this version and found {problemCount}{" "}
+            {problemCount === 1 ? "thing" : "things"} worth reviewing.
           </p>
           <p className="mt-1">Nothing has been changed yet.</p>
         </Callout>
       ) : null}
 
-      {analysisOutcome === "none" && analyzed ? (
+      {analysisOutcome === "none" && analysis === "analyzed_no_problems" ? (
         <Callout
           tone="success"
           title="Analysis complete"
@@ -510,42 +443,22 @@ export function DatasetWorkspacePage() {
         />
       ) : null}
 
-      {profile?.status === "FAILED" && !analyzing && !profileMutation.isError ? (
-        <RecoveryMessage
-          experience={analyzeFailureExperience()}
-          extraDetails={
-            profile.error_message
-              ? [{ label: "Message", value: profile.error_message }]
-              : undefined
-          }
-          actions={
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={runAnalyze}>
-                Try analysis again
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  goToTab("data");
-                }}
-              >
-                View data
-              </Button>
-            </div>
-          }
-        />
-      ) : null}
-
       <div className="overflow-x-auto">
-        <SegmentedControl<WorkspaceTab>
+        <SegmentedControl<Exclude<WorkspaceTab, "cleanup">>
           legend="Dataset sections"
-          value={tab === "cleanup" ? "problems" : tab}
+          value={visibleTab}
           onChange={goToTab}
           options={[
             { value: "overview", label: "Overview" },
             { value: "data", label: "Data" },
-            { value: "problems", label: "Problems" },
+            {
+              value: "problems",
+              label: "Problems",
+              hint:
+                analysis === "analyzed_with_problems" && problemCount > 0
+                  ? String(problemCount)
+                  : undefined,
+            },
             { value: "clean", label: "Clean" },
             { value: "history", label: "History" },
           ]}
@@ -569,174 +482,224 @@ export function DatasetWorkspacePage() {
         </FirstUseCue>
       ) : null}
 
-      {tab === "overview" ? (
-        <OverviewSection
-          profile={profile}
-          profileLoading={profileQuery.isLoading}
-          analyzing={analyzing}
-          onAnalyze={runAnalyze}
-          onReviewProblems={() => {
-            goToTab("problems");
-          }}
-          onGuidedCleanup={() => {
-            goToTab("cleanup");
-          }}
-        />
-      ) : null}
+      <div className="tab-enter">
+        {tab === "overview" ? (
+          <DatasetOverview
+            profile={profile}
+            profileLoading={profileQuery.isLoading}
+            analysis={analysis}
+            selectedVersion={selectedVersion}
+            viewingDifferent={viewingDifferent}
+            usingVersion={usingVersion}
+            onAnalyze={runAnalyze}
+            onReviewProblems={() => {
+              goToTab("problems");
+            }}
+            onViewData={() => {
+              goToTab("data");
+            }}
+            onUseVersion={applyThisVersion}
+          />
+        ) : null}
 
-      {tab === "data" ? (
-        <section aria-label="Data" className="space-y-6">
-          {previewQuery.isLoading ? (
-            <div className="space-y-2" aria-busy="true" aria-label="Loading preview">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-48 w-full" />
-            </div>
-          ) : null}
-          {previewQuery.isError ? (
-            <RecoveryMessage
-              experience={mapRecoveryError(previewQuery.error, {
-                operation: "load",
-                action: "Load data preview",
-                resourceId: datasetId,
-              })}
-            />
-          ) : null}
-          {previewQuery.data ? <PreviewGrid preview={previewQuery.data} /> : null}
-          {profile?.status === "READY" && profile.columns.length > 0 ? (
-            <ColumnExplorer columns={profile.columns} />
-          ) : (
-            <IngestionColumns datasetColumns={dataset.columns} />
-          )}
-        </section>
-      ) : null}
+        {tab === "data" ? (
+          <section aria-label="Data" className="space-y-6">
+            {previewQuery.isLoading ? (
+              <div aria-busy="true" aria-label="Loading preview">
+                <TableSkeleton rows={8} />
+              </div>
+            ) : null}
+            {previewQuery.isError ? (
+              <RecoveryMessage
+                experience={{
+                  ...mapRecoveryError(previewQuery.error, {
+                    operation: "load",
+                    action: "Load data preview",
+                    resourceId: datasetId,
+                  }),
+                  title: "This preview couldn't be loaded.",
+                  explanation:
+                    "FACILIO couldn't read the stored file for this version. The dataset record is still here.",
+                  consequence: "Nothing on this page was changed.",
+                }}
+                extraDetails={
+                  previewQuery.error instanceof Error
+                    ? [{ label: "Message", value: previewQuery.error.message }]
+                    : undefined
+                }
+                actions={
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      void previewQuery.refetch();
+                    }}
+                  >
+                    Try again
+                  </Button>
+                }
+              />
+            ) : null}
+            {previewQuery.data ? (
+              <PreviewGrid
+                preview={previewQuery.data}
+                totalRows={profile?.summary?.row_count}
+                totalColumns={profile?.summary?.column_count}
+                detectedTypes={
+                  profile?.status === "READY"
+                    ? Object.fromEntries(
+                        profile.columns.map((column) => [
+                          column.name,
+                          column.detected_type,
+                        ]),
+                      )
+                    : undefined
+                }
+              />
+            ) : null}
+            {profile?.status === "READY" && profile.columns.length > 0 ? (
+              <details className="rounded-[var(--facilio-radius-md)] border border-line bg-surface px-4 py-3">
+                <summary className="type-card-title cursor-pointer text-ink">
+                  Column details
+                </summary>
+                <div className="mt-4">
+                  <ColumnExplorer columns={profile.columns} />
+                </div>
+              </details>
+            ) : (
+              <IngestionColumns datasetColumns={dataset.columns} />
+            )}
+          </section>
+        ) : null}
 
-      {tab === "problems" ? (
-        <ProblemsSection
-          profile={profile}
-          profileLoading={profileQuery.isLoading}
-          analyzing={analyzing}
-          datasetId={datasetId}
-          versionId={selectedVersionId}
-          onAnalyze={runAnalyze}
-          onGuidedCleanup={(focusId) => {
-            const next = new URLSearchParams(searchParams);
-            next.set("tab", "cleanup");
-            if (focusId) {
-              next.set("focus", focusId);
-            } else {
-              next.delete("focus");
-            }
-            setSearchParams(next);
-            setTab("cleanup");
-          }}
-          onManualClean={() => {
-            goToTab("clean");
-          }}
-          onPrepareFix={(operation, parameters) => {
-            const next = new URLSearchParams(searchParams);
-            next.set("transform", operation);
-            setSearchParams(next);
-            setFixPrefill({ operation, parameters });
-            goToTab("clean");
-          }}
-        />
-      ) : null}
+        {tab === "problems" ? (
+          <DatasetProblems
+            profile={profile}
+            profileLoading={profileQuery.isLoading}
+            analysis={analysis}
+            datasetId={datasetId}
+            versionId={selectedVersionId}
+            onAnalyze={runAnalyze}
+            onGuidedCleanup={(focusId) => {
+              const next = new URLSearchParams(searchParams);
+              next.set("tab", "cleanup");
+              if (focusId) {
+                next.set("focus", focusId);
+              } else {
+                next.delete("focus");
+              }
+              setSearchParams(next);
+              setTab("cleanup");
+            }}
+            onManualClean={() => {
+              goToTab("clean");
+            }}
+            onPrepareFix={(operation, parameters) => {
+              const next = new URLSearchParams(searchParams);
+              next.set("transform", operation);
+              setSearchParams(next);
+              setFixPrefill({ operation, parameters });
+              goToTab("clean");
+            }}
+          />
+        ) : null}
 
-      {tab === "cleanup" && selectedVersionId ? (
-        <GuidedCleanup
-          datasetId={datasetId}
-          versionId={selectedVersionId}
-          versionNumber={
-            selectedVersion?.version_number ?? dataset.current_version_number ?? 1
-          }
-          focusId={searchParams.get("focus")}
-          onLeave={() => {
-            goToTab("problems");
-          }}
-          onManualClean={() => {
-            goToTab("clean");
-          }}
-          onOpenVersion={(versionId, nextTab) => {
-            const next = new URLSearchParams(searchParams);
-            next.set("version", versionId);
-            next.set("tab", nextTab);
-            next.delete("focus");
-            setSearchParams(next);
-            setTab(nextTab);
-          }}
-        />
-      ) : null}
-
-      {tab === "clean" && selectedVersionId ? (
-        <section aria-label="Clean data" className="space-y-4">
-          <p className="text-sm leading-6 text-ink-secondary">
-            FACILIO will create a new version. Your original stays unchanged.{" "}
-            <LearnMoreLink to="/learn#cleaning">Why preview changes?</LearnMoreLink>
-          </p>
-          <TransformWorkspace
-            variant="inline"
-            open
+        {tab === "cleanup" && selectedVersionId ? (
+          <GuidedCleanup
             datasetId={datasetId}
             versionId={selectedVersionId}
             versionNumber={
               selectedVersion?.version_number ?? dataset.current_version_number ?? 1
             }
-            columns={dataset.columns}
-            initialOperation={fixPrefill?.operation}
-            initialParameters={fixPrefill?.parameters}
-            onClose={() => {
-              goToTab("overview");
+            focusId={searchParams.get("focus")}
+            onLeave={() => {
+              goToTab("problems");
             }}
-            onApplied={(versionId, versionNumber, summary) => {
+            onManualClean={() => {
+              goToTab("clean");
+            }}
+            onOpenVersion={(versionId, nextTab) => {
               const next = new URLSearchParams(searchParams);
               next.set("version", versionId);
-              next.delete("transform");
+              next.set("tab", nextTab);
+              next.delete("focus");
               setSearchParams(next);
-              setAppliedNotice(`V${String(versionNumber)} created. ${summary}`);
-              goToTab("history");
+              setTab(nextTab);
             }}
           />
-        </section>
-      ) : null}
+        ) : null}
 
-      {tab === "history" && selectedVersionId ? (
-        <div className="space-y-4">
-          <HistoryPanel
-            datasetId={datasetId}
-            versionId={selectedVersionId}
-            onSelectVersion={(versionId) => {
-              const next = new URLSearchParams(searchParams);
-              next.set("version", versionId);
-              setSearchParams(next);
+        {tab === "clean" && selectedVersionId ? (
+          <CleanEntry
+            analysis={analysis}
+            problemCount={problemCount}
+            onReviewSuggestions={() => {
+              goToTab("cleanup");
             }}
-          />
-          <SourceTechnicalDetails
-            filename={dataset.original_filename}
-            fileType={dataset.file_type}
-            fileSize={dataset.file_size}
-            createdAt={dataset.created_at}
-            selectedSheet={dataset.selected_sheet}
-            delimiter={dataset.delimiter}
-            encoding={dataset.encoding}
-            datasetId={dataset.id}
-            versionId={selectedVersionId}
-          />
-        </div>
-      ) : null}
+          >
+            <TransformWorkspace
+              variant="inline"
+              open
+              datasetId={datasetId}
+              versionId={selectedVersionId}
+              versionNumber={
+                selectedVersion?.version_number ?? dataset.current_version_number ?? 1
+              }
+              columns={dataset.columns}
+              initialOperation={fixPrefill?.operation}
+              initialParameters={fixPrefill?.parameters}
+              onClose={() => {
+                goToTab("overview");
+              }}
+              onApplied={(versionId, versionNumber, summary) => {
+                const next = new URLSearchParams(searchParams);
+                next.set("version", versionId);
+                next.delete("transform");
+                setSearchParams(next);
+                setAppliedNotice(`V${String(versionNumber)} created. ${summary}`);
+                goToTab("history");
+              }}
+            />
+          </CleanEntry>
+        ) : null}
 
-      {tab === "overview" ? (
-        <SourceTechnicalDetails
-          filename={dataset.original_filename}
-          fileType={dataset.file_type}
-          fileSize={dataset.file_size}
-          createdAt={dataset.created_at}
-          selectedSheet={dataset.selected_sheet}
-          delimiter={dataset.delimiter}
-          encoding={dataset.encoding}
-          datasetId={dataset.id}
-          versionId={selectedVersionId}
-        />
-      ) : null}
+        {tab === "history" && selectedVersionId ? (
+          <div className="space-y-4">
+            <HistoryPanel
+              datasetId={datasetId}
+              versionId={selectedVersionId}
+              onSelectVersion={setVersion}
+            />
+            <SourceTechnicalDetails
+              filename={dataset.original_filename}
+              fileType={dataset.file_type}
+              fileSize={dataset.file_size}
+              createdAt={dataset.created_at}
+              selectedSheet={dataset.selected_sheet}
+              delimiter={dataset.delimiter}
+              encoding={dataset.encoding}
+              datasetId={dataset.id}
+              versionId={selectedVersionId}
+            />
+          </div>
+        ) : null}
+
+        {tab === "overview" ? (
+          <div className="mt-6">
+            <SourceTechnicalDetails
+              filename={dataset.original_filename}
+              fileType={dataset.file_type}
+              fileSize={dataset.file_size}
+              createdAt={dataset.created_at}
+              selectedSheet={dataset.selected_sheet}
+              delimiter={dataset.delimiter}
+              encoding={dataset.encoding}
+              datasetId={dataset.id}
+              versionId={selectedVersionId}
+            />
+          </div>
+        ) : null}
+      </div>
 
       <RenameDialog
         key={dataset.name}
@@ -767,211 +730,17 @@ export function DatasetWorkspacePage() {
   );
 }
 
-function OverviewSection({
-  profile,
-  profileLoading,
-  analyzing,
-  onAnalyze,
-  onReviewProblems,
-  onGuidedCleanup,
-}: {
-  profile: DatasetProfile | null;
-  profileLoading: boolean;
-  analyzing: boolean;
-  onAnalyze: () => void;
-  onReviewProblems: () => void;
-  onGuidedCleanup: () => void;
-}) {
-  if (profileLoading) {
-    return <Skeleton className="h-48 w-full" />;
-  }
-  if (!profile || profile.status === "NOT_PROFILED" || profile.status === "PROFILING") {
-    return <UnprofiledState analyzing={analyzing} onAnalyze={onAnalyze} />;
-  }
-  if (profile.status === "FAILED") {
-    return (
-      <RecoveryMessage
-        experience={analyzeFailureExperience()}
-        actions={
-          <Button size="sm" onClick={onAnalyze}>
-            Try analysis again
-          </Button>
-        }
-      />
-    );
-  }
-  const summary = profile.summary;
-  if (!summary) {
-    return <UnprofiledState analyzing={analyzing} onAnalyze={onAnalyze} />;
-  }
-  return (
-    <div className="space-y-5">
-      <dl className="grid gap-3 sm:grid-cols-3">
-        <Metric label="Rows" value={formatCount(summary.row_count)} />
-        <Metric label="Columns" value={formatCount(summary.column_count)} />
-        <Metric label="Total cells" value={formatCount(summary.total_cells)} />
-        <Metric label="Missing cells" value={formatCount(summary.missing_cells)} />
-        <Metric label="Duplicate rows" value={formatCount(summary.duplicate_rows)} />
-        <Metric
-          label="Last analyzed"
-          value={profile.profiled_at ? formatDateTime(profile.profiled_at) : "—"}
-        />
-      </dl>
-      {profile.quality ? <QualityHero quality={profile.quality} /> : null}
-      {profile.issue_counts.total > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={onGuidedCleanup}>Clean these problems</Button>
-          <Button variant="secondary" onClick={onReviewProblems}>
-            Review problems
-          </Button>
-        </div>
-      ) : (
-        <p className="text-sm text-ink-secondary">
-          FACILIO didn’t detect cleanup problems with the checks it ran.
-        </p>
-      )}
-      <p className="text-xs text-ink-muted">
-        Completeness {formatPercent(summary.complete_percentage)} · Unique rows{" "}
-        {formatCount(summary.unique_rows)}
-      </p>
-    </div>
-  );
-}
-
-function ProblemsSection({
-  profile,
-  profileLoading,
-  analyzing,
-  datasetId,
-  versionId,
-  onAnalyze,
-  onGuidedCleanup,
-  onManualClean,
-  onPrepareFix,
-}: {
-  profile: DatasetProfile | null;
-  profileLoading: boolean;
-  analyzing: boolean;
-  datasetId: string;
-  versionId?: string;
-  onAnalyze: () => void;
-  onGuidedCleanup: (focusId?: string) => void;
-  onManualClean: () => void;
-  onPrepareFix: (operation: string, parameters: Record<string, unknown>) => void;
-}) {
-  if (profileLoading || analyzing) {
-    return (
-      <Card>
-        <h2 className="text-sm font-medium text-ink">Analyzing</h2>
-        <p className="mt-2 text-sm text-ink-secondary">
-          FACILIO is inspecting this version. Nothing is being changed.
-        </p>
-      </Card>
-    );
-  }
-  if (!profile || profile.status === "NOT_PROFILED") {
-    return <UnprofiledState analyzing={analyzing} onAnalyze={onAnalyze} />;
-  }
-  if (profile.status === "FAILED") {
-    return (
-      <RecoveryMessage
-        experience={analyzeFailureExperience()}
-        extraDetails={
-          profile.error_message
-            ? [{ label: "Message", value: profile.error_message }]
-            : undefined
-        }
-        actions={<Button onClick={onAnalyze}>Try analysis again</Button>}
-      />
-    );
-  }
-  if (profile.status !== "READY") {
-    return <UnprofiledState analyzing={analyzing} onAnalyze={onAnalyze} />;
-  }
-
-  const problemCount = profile.issue_counts.total;
-  return (
-    <section aria-label="Problems" className="space-y-5">
-      <p className="text-sm text-ink-secondary" role="status">
-        {profileStatusLabel(profile.status)}
-        {problemCount > 0
-          ? ` · ${formatCount(problemCount)} problems found`
-          : " · no detected problems"}
-      </p>
-      <p>
-        <LearnMoreLink to="/learn#problems">How FACILIO finds problems</LearnMoreLink>
-      </p>
-      {profile.quality ? <QualityHero quality={profile.quality} /> : null}
-      {profile.quality ? (
-        <DimensionCards dimensions={profile.quality.dimensions} />
-      ) : null}
-      {profile.columns.length > 0 ? <MissingnessChart columns={profile.columns} /> : null}
-      {problemCount === 0 ? (
-        <Callout
-          tone="success"
-          title="FACILIO didn’t detect cleanup problems with the checks it ran"
-        >
-          You can still view the data or use manual Clean. FACILIO will not invent
-          recommendations.
-        </Callout>
-      ) : (
-        <>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => {
-                onGuidedCleanup();
-              }}
-            >
-              Clean these problems
-            </Button>
-            <Button variant="secondary" onClick={onManualClean}>
-              Open manual Clean
-            </Button>
-          </div>
-          <IssuesPanel
-            datasetId={datasetId}
-            enabled
-            versionId={versionId}
-            onIncludeInCleanup={(issueId) => {
-              onGuidedCleanup(issueId);
-            }}
-            onPrepareFix={onPrepareFix}
-          />
-        </>
-      )}
-    </section>
-  );
-}
-
-function UnprofiledState({
-  analyzing,
-  onAnalyze,
-}: {
-  analyzing: boolean;
-  onAnalyze: () => void;
-}) {
-  return (
-    <Card>
-      <h2 className="text-sm font-medium text-ink">Not analyzed</h2>
-      <p className="mt-2 text-sm leading-6 text-ink-secondary">
-        Analysis looks for measurable problems such as missing values and duplicates. It
-        does not change your original data.
-      </p>
-      <Button className="mt-4" onClick={onAnalyze} disabled={analyzing}>
-        {analyzing ? "Analyzing…" : "Analyze data"}
-      </Button>
-    </Card>
-  );
-}
-
 function IngestionColumns({
   datasetColumns,
 }: {
   datasetColumns: { name: string; index: number; dtype: string }[];
 }) {
   return (
-    <>
-      <div className="overflow-hidden rounded-[var(--facilio-radius-md)] border border-line">
+    <details className="rounded-[var(--facilio-radius-md)] border border-line bg-surface px-4 py-3">
+      <summary className="type-card-title cursor-pointer text-ink">
+        Detected columns
+      </summary>
+      <div className="mt-4 overflow-hidden rounded-[var(--facilio-radius-md)] border border-line">
         <table className="w-full text-left text-sm">
           <caption className="sr-only">Detected columns</caption>
           <thead className="bg-subtle font-mono text-[11px] tracking-[0.08em] text-ink-muted uppercase">
@@ -988,8 +757,8 @@ function IngestionColumns({
                   {column.index + 1}
                 </td>
                 <td className="px-4 py-2 text-ink">{column.name || "(blank)"}</td>
-                <td className="px-4 py-2 text-xs uppercase text-ink-secondary">
-                  {column.dtype}
+                <td className="px-4 py-2 text-ink-secondary">
+                  {columnTypeLabel(column.dtype.toUpperCase())}
                 </td>
               </tr>
             ))}
@@ -1000,7 +769,7 @@ function IngestionColumns({
         Types are conservative inferences for display. Analyze the dataset for column
         profiles.
       </p>
-    </>
+    </details>
   );
 }
 
@@ -1029,7 +798,7 @@ function SourceTechnicalDetails({
     <TechnicalDetails>
       <dl className="grid gap-3 sm:grid-cols-2">
         <Info label="Original filename" value={filename} />
-        <Info label="Format" value={fileType.toUpperCase()} />
+        <Info label="Format" value={fileFormatLabel(fileType)} />
         <Info label="File size" value={formatFileSize(fileSize)} />
         <Info label="Created" value={formatDateTime(createdAt)} />
         {selectedSheet ? <Info label="Selected sheet" value={selectedSheet} /> : null}
@@ -1041,17 +810,6 @@ function SourceTechnicalDetails({
         {versionId ? <Info label="Version ID" value={versionId} /> : null}
       </dl>
     </TechnicalDetails>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[var(--facilio-radius-md)] border border-line bg-surface px-4 py-3">
-      <dt className="font-mono text-[11px] tracking-[0.08em] text-ink-muted uppercase">
-        {label}
-      </dt>
-      <dd className="mt-1 text-lg font-medium tabular-nums text-ink">{value}</dd>
-    </div>
   );
 }
 

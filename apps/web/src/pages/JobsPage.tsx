@@ -1,62 +1,64 @@
 import { useState } from "react";
 import { Link } from "react-router";
 
-import { RecoveryMessage } from "@/features/recovery/RecoveryMessage";
-import { mapRecoveryError } from "@/features/recovery/map-error";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
-import { useJobsQuery } from "@/features/jobs/queries";
+import { groupActivityByDate } from "@/features/jobs/activity-groups";
+import { useJobsQuery, useOperationsHealthQuery } from "@/features/jobs/queries";
 import { FirstUseCue } from "@/features/onboarding/FirstUseCue";
 import { LearnMoreLink } from "@/features/learn/LearnMoreLink";
-import { activityResultLabel } from "@/lib/activity-outcome";
-import { formatDateTime, formatDuration } from "@/lib/format";
-import { jobStatusLabel } from "@/lib/status-labels";
+import { RecoveryMessage } from "@/features/recovery/RecoveryMessage";
+import { mapRecoveryError } from "@/features/recovery/map-error";
+import { activityOutcome } from "@/lib/activity-outcome";
+import { formatRelativeTime } from "@/lib/format";
 import type { JobStatus, JobSummary } from "@/types/jobs";
-import { isActiveJobStatus } from "@/types/jobs";
 
 const filters: { id: JobStatus | ""; label: string }[] = [
   { id: "", label: "All" },
-  { id: "QUEUED", label: "Waiting to start" },
+  { id: "QUEUED", label: "Waiting" },
   { id: "RUNNING", label: "Running" },
-  { id: "SUCCEEDED", label: "Done" },
-  { id: "FAILED", label: "Couldn't finish" },
+  { id: "SUCCEEDED", label: "Completed" },
+  { id: "FAILED", label: "Needs attention" },
   { id: "CANCELLED", label: "Cancelled" },
 ];
-
-const statusTone: Record<
-  JobStatus,
-  "success" | "danger" | "warning" | "info" | "neutral"
-> = {
-  QUEUED: "neutral",
-  RUNNING: "info",
-  SUCCEEDED: "success",
-  FAILED: "danger",
-  CANCEL_REQUESTED: "warning",
-  CANCELLED: "warning",
-};
 
 export function JobsPage() {
   const [status, setStatus] = useState<JobStatus | "">("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const operations = useOperationsHealthQuery();
   const list = useJobsQuery({
     status: status || undefined,
     q: search.trim() || undefined,
-    page: 1,
-    page_size: 50,
+    page,
+    page_size: 20,
   });
+  const workerAvailable = operations.data
+    ? operations.data.worker.status === "available"
+    : true;
+  const items = list.data?.items ?? [];
+  const groups = groupActivityByDate(
+    items,
+    (item) => item.completed_at ?? item.started_at ?? item.queued_at,
+  );
+  const filteredEmpty = Boolean(status || search.trim()) && items.length === 0;
+  const trueEmpty = !status && !search.trim() && list.data?.total === 0;
 
   return (
-    <div className="page-enter mx-auto max-w-6xl space-y-6">
+    <div className="page-enter mx-auto content-page space-y-6">
       <PageHeader
         title="Activity"
-        description="See whether a cleanup finished, is still running, or needs attention."
+        description="See recent cleaning and processing activity across FACILIO."
       />
       <p>
         <LearnMoreLink to="/learn#activity">What does Activity show?</LearnMoreLink>
       </p>
       <FirstUseCue cue="activity" title="Activity">
-        Activity shows what happened when a cleanup ran.
+        Activity shows what happened when a Cleanup ran, and whether a version was
+        created.
       </FirstUseCue>
       <div className="flex flex-wrap items-end gap-3">
         <div
@@ -74,107 +76,153 @@ export function JobsPage() {
               aria-pressed={status === item.id}
               onClick={() => {
                 setStatus(item.id);
+                setPage(1);
               }}
             >
               {item.label}
             </button>
           ))}
         </div>
-        <label className="text-xs text-ink-secondary">
-          Search
-          <input
-            className="ml-2 h-9 w-56 rounded-[var(--facilio-radius-md)] border border-line bg-raised px-2 text-sm"
+        <div className="min-w-[12rem] flex-1">
+          <Input
+            id="activity-search"
+            label="Search"
             value={search}
+            placeholder="Cleanup or dataset"
             onChange={(event) => {
               setSearch(event.target.value);
+              setPage(1);
             }}
-            placeholder="Cleanup or dataset"
           />
-        </label>
+        </div>
       </div>
       {list.isLoading ? (
-        <Skeleton className="h-64 w-full" />
+        <TableSkeleton rows={6} />
       ) : list.isError ? (
         <RecoveryMessage
           experience={mapRecoveryError(list.error, {
             operation: "load",
             action: "Load activity",
           })}
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                void list.refetch();
+              }}
+            >
+              Try again
+            </Button>
+          }
         />
+      ) : trueEmpty ? (
+        <div>
+          <p className="type-body text-ink">No activity yet</p>
+          <p className="type-body mt-1 text-ink-muted">
+            Cleaning and processing activity will appear here.
+          </p>
+        </div>
+      ) : filteredEmpty ? (
+        <p className="type-body text-ink-muted">No activity matches these filters.</p>
       ) : (
-        <div className="overflow-x-auto rounded-[var(--facilio-radius-md)] border border-line md:overflow-visible">
-          <table className="stack-table w-full text-left text-sm md:min-w-[720px]">
-            <caption className="sr-only">Cleanup activity</caption>
-            <thead className="bg-subtle text-xs text-ink-muted">
-              <tr>
-                <th className="px-4 py-2 font-medium">Cleanup</th>
-                <th className="px-4 py-2 font-medium">Dataset</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Progress</th>
-                <th className="px-4 py-2 font-medium">Time</th>
-                <th className="px-4 py-2 font-medium">Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(list.data?.items ?? []).length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-10 text-center text-sm text-ink-muted"
-                  >
-                    {status || search.trim()
-                      ? "No activity matches these filters."
-                      : "No activity yet"}
-                  </td>
-                </tr>
+        <div className="space-y-6">
+          {groups.map((group) => (
+            <section
+              key={group.id}
+              className="activity-group"
+              aria-labelledby={`activity-${group.id}`}
+            >
+              {groups.length > 1 ? (
+                <h2 id={`activity-${group.id}`} className="type-meta mb-2 text-ink-muted">
+                  {group.label}
+                </h2>
               ) : (
-                list.data?.items.map((item) => (
-                  <tr key={item.id} className="border-t border-line hover:bg-subtle">
-                    <td data-label="Cleanup" className="px-4 py-3 font-medium">
-                      <Link to={`/jobs/${item.id}`} className="text-ink hover:underline">
-                        {item.workflow_name ?? "Cleanup"}
-                      </Link>
-                    </td>
-                    <td data-label="Dataset" className="px-4 py-3">
-                      {item.dataset_name ?? "—"}
-                    </td>
-                    <td data-label="Status" className="px-4 py-3">
-                      <ActivityStatus item={item} />
-                    </td>
-                    <td
-                      data-label="Progress"
-                      className="px-4 py-3 tabular-nums text-ink-secondary"
-                    >
-                      {item.progress.label}
-                    </td>
-                    <td data-label="Time" className="px-4 py-3 tabular-nums">
-                      {item.execution_ms != null
-                        ? formatDuration(item.execution_ms)
-                        : formatDateTime(item.queued_at)}
-                    </td>
-                    <td data-label="Result" className="px-4 py-3 text-ink-secondary">
-                      {activityResultLabel(item)}
-                    </td>
-                  </tr>
-                ))
+                <h2 id={`activity-${group.id}`} className="sr-only">
+                  {group.label}
+                </h2>
               )}
-            </tbody>
-          </table>
+              <ul className="overflow-hidden rounded-[var(--facilio-radius-md)] border border-line bg-surface">
+                {group.items.map((item) => (
+                  <ActivityRow
+                    key={item.id}
+                    item={item}
+                    workerAvailable={workerAvailable}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+          {list.data && list.data.total > list.data.page_size ? (
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => {
+                  setPage((value) => value - 1);
+                }}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page * list.data.page_size >= list.data.total}
+                onClick={() => {
+                  setPage((value) => value + 1);
+                }}
+              >
+                Next
+              </Button>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
   );
 }
 
-function ActivityStatus({ item }: { item: JobSummary }) {
+function ActivityRow({
+  item,
+  workerAvailable,
+}: {
+  item: JobSummary;
+  workerAvailable: boolean;
+}) {
+  const outcome = activityOutcome(item, { workerAvailable });
+  const pulse = outcome.kind === "running" || outcome.kind === "waiting";
+  const version =
+    item.output_version_number != null ? `V${String(item.output_version_number)}` : null;
+
   return (
-    <span className="inline-flex items-center gap-2">
-      <StatusIndicator
-        label={jobStatusLabel(item.status)}
-        tone={statusTone[item.status]}
-        compact
-        pulse={isActiveJobStatus(item.status)}
-      />
-    </span>
+    <li className="activity-item">
+      <Link
+        to={`/jobs/${item.id}`}
+        className="min-w-0 font-medium text-ink hover:underline"
+      >
+        {item.workflow_name ?? "Cleanup"}
+      </Link>
+      <span className="truncate text-sm text-ink-secondary">
+        {item.dataset_name ?? "—"}
+      </span>
+      <span className="min-w-0">
+        <StatusIndicator
+          label={outcome.headline}
+          tone={outcome.tone}
+          compact
+          pulse={pulse}
+        />
+        {outcome.kind === "partial_success" ? (
+          <span className="type-caption mt-0.5 block text-warning">
+            Analysis needs attention
+          </span>
+        ) : null}
+      </span>
+      <span className="text-sm text-ink-secondary">{version ?? "—"}</span>
+      <span className="type-caption text-ink-muted">
+        {formatRelativeTime(item.completed_at ?? item.started_at ?? item.queued_at)}
+      </span>
+    </li>
   );
 }

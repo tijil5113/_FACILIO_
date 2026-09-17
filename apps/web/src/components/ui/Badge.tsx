@@ -21,7 +21,7 @@ export function Badge({ tone = "neutral", className, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-[var(--facilio-radius-sm)] px-1.5 py-0.5 font-mono text-[11px] tracking-wide",
+        "type-meta inline-flex items-center rounded-[var(--facilio-radius-sm)] px-1.5 py-0.5 font-mono tracking-wide",
         tones[tone],
         className,
       )}

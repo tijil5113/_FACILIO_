@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import { cn } from "@/lib/cn";
+import { buttonClassName, type ButtonVariant } from "@/components/ui/button-styles";
 
 interface ProductActionProps {
   to: string;
@@ -13,16 +13,9 @@ export function ProductAction({
   children,
   variant = "secondary",
 }: ProductActionProps) {
+  const buttonVariant: ButtonVariant = variant;
   return (
-    <Link
-      to={to}
-      className={cn(
-        "inline-flex h-9 items-center justify-center rounded-[var(--facilio-radius-md)] px-3 text-sm font-medium",
-        variant === "primary"
-          ? "border border-ink bg-ink text-canvas hover:bg-ink/90 dark:text-[#121410]"
-          : "border border-line bg-surface text-ink hover:bg-subtle",
-      )}
-    >
+    <Link to={to} className={buttonClassName({ variant: buttonVariant })}>
       {children}
     </Link>
   );

@@ -111,7 +111,7 @@ export function QualityDimensions() {
               className={cn(
                 "rounded-[var(--facilio-radius-md)] border px-3 py-1.5 text-sm transition-colors duration-[var(--facilio-duration-fast)]",
                 active
-                  ? "border-ink bg-ink text-canvas dark:text-[#121410]"
+                  ? "border-ink bg-ink text-canvas"
                   : "border-line bg-surface text-ink hover:bg-subtle",
               )}
               onClick={() => {

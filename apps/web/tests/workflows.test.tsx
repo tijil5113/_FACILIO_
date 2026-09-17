@@ -345,6 +345,38 @@ function mockWorkflowApi(initial: WorkflowDetail = workflowRecord()) {
         202,
       );
     }
+    if (path === `/api/v1/workflows/${workflow.id}` && method === "PATCH") {
+      workflow = {
+        ...workflow,
+        name: typeof body.name === "string" ? body.name : workflow.name,
+        description:
+          typeof body.description === "string" || body.description === null
+            ? body.description
+            : workflow.description,
+      };
+      return jsonResponse({ success: true, data: workflow });
+    }
+    if (path === "/api/v1/jobs") {
+      return jsonResponse({
+        success: true,
+        data: { items: [], page: 1, page_size: 20, total: 0 },
+      });
+    }
+    if (path === "/api/v1/operations/health") {
+      return jsonResponse({
+        success: true,
+        data: {
+          queue: {
+            status: "ready",
+            backend: "redis",
+            queued_count: 0,
+            name: "workflows",
+          },
+          worker: { status: "available", available_count: 1, last_seen_at: now },
+          jobs: { queued: 0, running: 0, failed: 0, succeeded: 0 },
+        },
+      });
+    }
     if (path === "/api/v1/workflow-runs") {
       return jsonResponse({
         success: true,
@@ -377,11 +409,14 @@ test("creating a workflow opens the builder", async () => {
   const user = userEvent.setup();
   vi.stubGlobal("fetch", mockWorkflowApi(workflowRecord({ step_count: 0, steps: [] })));
   renderApp(["/workflows"]);
-  await user.click(await screen.findByRole("button", { name: "New cleanup" }));
-  await user.type(screen.getByLabelText("Name"), "Cleanup copy");
-  await user.click(screen.getByRole("button", { name: "Create cleanup" }));
+  await screen.findByRole("link", { name: "Customer Data Cleanup" });
+  await user.click(screen.getByRole("button", { name: "New Cleanup" }));
+  const dialog = await screen.findByRole("dialog", { name: "New Cleanup" });
+  await user.type(within(dialog).getByLabelText("Name"), "Cleanup copy");
+  await user.click(within(dialog).getByRole("button", { name: "Create Cleanup" }));
   expect(await screen.findByLabelText("Cleanup name")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Preview changes" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Add cleaning step" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Run Cleanup" })).toBeDisabled();
 });
 
 test("builder can add a step and move it with the keyboard controls", async () => {
@@ -417,9 +452,9 @@ test("builder can add a step and move it with the keyboard controls", async () =
   });
   vi.stubGlobal("fetch", mockWorkflowApi(seeded));
   renderApp(["/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]);
-  expect(await screen.findByLabelText("Steps")).toBeInTheDocument();
-  expect(screen.getAllByText("Remove extra spaces").length).toBeGreaterThan(0);
-  const pipeline = screen.getByLabelText("Steps");
+  expect(await screen.findByRole("list", { name: "Cleaning steps" })).toBeInTheDocument();
+  expect(screen.getAllByText("Remove extra spaces from name").length).toBeGreaterThan(0);
+  const pipeline = screen.getByRole("list", { name: "Cleaning steps" });
   const moveUp = within(pipeline).getAllByRole("button", { name: "Move step up" });
   const secondHandle = moveUp[1];
   expect(secondHandle).toBeDefined();
@@ -453,17 +488,213 @@ test("preview shows per-step impact and run completes", async () => {
   });
   vi.stubGlobal("fetch", mockWorkflowApi(seeded));
   renderApp(["/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]);
-  await screen.findByText("Compatible with the selected version.");
+  await user.click(await screen.findByRole("button", { name: "Run Cleanup" }));
+  await user.selectOptions(
+    screen.getByLabelText("Target dataset"),
+    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  );
+  expect(
+    await screen.findByText(/These steps can run on the selected version/),
+  ).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Preview changes" }));
-  expect((await screen.findAllByText("Preview changes")).length).toBeGreaterThan(0);
-  expect(screen.getByText(/12 → 11/)).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Run cleanup" }));
-  expect(await screen.findByText("Cleanup started")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "View activity" })).toBeInTheDocument();
+  expect(await screen.findByText(/12 → 11/)).toBeInTheDocument();
+  const dialog = screen.getByRole("dialog", { name: "Run Cleanup" });
+  await user.click(within(dialog).getByRole("button", { name: "Run Cleanup" }));
+  expect(await screen.findByText("Waiting")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "View Activity" })).toBeInTheDocument();
 });
 
 test("runs page lists an empty history without fabricated rows", async () => {
   renderApp(["/runs"]);
   expect(await screen.findByRole("heading", { name: "Run records" })).toBeInTheDocument();
   expect(await screen.findByText("No run records yet")).toBeInTheDocument();
+});
+
+test("empty cleanups offers create and open dataset", async () => {
+  vi.stubGlobal(
+    "fetch",
+    mockWorkflowApi(
+      workflowRecord({
+        steps: [],
+        step_count: 0,
+      }),
+    ),
+  );
+  const fetchMock = mockWorkflowApi();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = requestUrl(input);
+      const method = (init?.method ?? "GET").toUpperCase();
+      const path = pathnameOf(url);
+      if (path === "/api/v1/workflows" && method === "GET") {
+        return jsonResponse({
+          success: true,
+          data: { items: [], page: 1, page_size: 20, total: 0 },
+        });
+      }
+      return fetchMock(input, init);
+    }),
+  );
+  renderApp(["/workflows"]);
+  expect(await screen.findByText(/No Cleanups yet/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "New Cleanup" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Open a dataset" })).toBeInTheDocument();
+});
+
+test("builder picker adds an ordered cleaning step", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", mockWorkflowApi());
+  renderApp(["/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]);
+  await user.click(await screen.findByRole("button", { name: "Add cleaning step" }));
+  expect(
+    await screen.findByText("What do you want to change? Steps run from top to bottom."),
+  ).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /Remove extra spaces/ }));
+  await user.click(screen.getByRole("button", { name: "Add this step" }));
+  expect(await screen.findByRole("list", { name: "Cleaning steps" })).toBeInTheDocument();
+});
+
+test("run review blocks when the worker is unavailable", async () => {
+  const user = userEvent.setup();
+  const seeded = workflowRecord({
+    status: "READY",
+    revision: 2,
+    step_count: 1,
+    enabled_step_count: 1,
+    steps: [
+      {
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        workflow_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        position: 0,
+        operation_code: "TRIM_WHITESPACE",
+        parameters: { column: "name" },
+        enabled: true,
+        created_at: now,
+        updated_at: now,
+      },
+    ],
+  });
+  const fetchMock = mockWorkflowApi(seeded);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const path = pathnameOf(requestUrl(input));
+      if (path === "/api/v1/operations/health") {
+        return jsonResponse({
+          success: true,
+          data: {
+            queue: {
+              status: "unavailable",
+              backend: "redis",
+              queued_count: 0,
+              name: "workflows",
+            },
+            worker: { status: "unavailable", available_count: 0, last_seen_at: null },
+            jobs: { queued: 0, running: 0, failed: 0, succeeded: 0 },
+          },
+        });
+      }
+      return fetchMock(input, init);
+    }),
+  );
+  renderApp(["/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]);
+  await user.click(await screen.findByRole("button", { name: "Run Cleanup" }));
+  expect(await screen.findByText(/can't start right now/i)).toBeInTheDocument();
+  const dialog = screen.getByRole("dialog", { name: "Run Cleanup" });
+  expect(within(dialog).getByRole("button", { name: "Run Cleanup" })).toBeDisabled();
+});
+
+test("run review explains a missing column before submission", async () => {
+  const user = userEvent.setup();
+  const seeded = workflowRecord({
+    status: "READY",
+    revision: 2,
+    step_count: 1,
+    enabled_step_count: 1,
+    steps: [
+      {
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        workflow_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        position: 0,
+        operation_code: "TRIM_WHITESPACE",
+        parameters: { column: "status" },
+        enabled: true,
+        created_at: now,
+        updated_at: now,
+      },
+    ],
+  });
+  const fetchMock = mockWorkflowApi(seeded);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = requestUrl(input);
+      const method = (init?.method ?? "GET").toUpperCase();
+      const path = pathnameOf(url);
+      if (path.endsWith("/validate") && method === "POST") {
+        return jsonResponse({
+          success: true,
+          data: {
+            valid: false,
+            empty: false,
+            issues: [],
+            steps: [],
+            contract: [],
+            compatibility: {
+              status: "INCOMPATIBLE",
+              compatible: false,
+              reasons: [
+                {
+                  code: "COLUMN_NOT_FOUND",
+                  message: "Column status is missing.",
+                  column: "status",
+                },
+              ],
+            },
+            projected_schema: [],
+          },
+        });
+      }
+      return fetchMock(input, init);
+    }),
+  );
+  renderApp(["/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]);
+  await user.click(await screen.findByRole("button", { name: "Run Cleanup" }));
+  await user.selectOptions(
+    screen.getByLabelText("Target dataset"),
+    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  );
+  expect(
+    await screen.findByText(
+      /This Cleanup expects a column named status, but this version does not contain it/,
+    ),
+  ).toBeInTheDocument();
+  const dialog = screen.getByRole("dialog", { name: "Run Cleanup" });
+  expect(within(dialog).getByRole("button", { name: "Run Cleanup" })).toBeDisabled();
+});
+
+test("guided save arrival explains the saved steps", async () => {
+  const seeded = workflowRecord({
+    status: "READY",
+    revision: 2,
+    step_count: 1,
+    enabled_step_count: 1,
+    steps: [
+      {
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        workflow_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        position: 0,
+        operation_code: "TRIM_WHITESPACE",
+        parameters: { column: "customer_name" },
+        enabled: true,
+        created_at: now,
+        updated_at: now,
+      },
+    ],
+  });
+  vi.stubGlobal("fetch", mockWorkflowApi(seeded));
+  renderApp(["/workflows/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?saved=1"]);
+  expect(await screen.findByText("Cleaning steps saved")).toBeInTheDocument();
+  expect(screen.getByText("Remove extra spaces from customer_name")).toBeInTheDocument();
 });

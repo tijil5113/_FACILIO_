@@ -11,7 +11,7 @@ beforeEach(() => {
 test("datasets empty state offers a working upload action", async () => {
   renderApp(["/datasets"]);
   expect(await screen.findByRole("heading", { name: "Datasets" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Upload a file" })).toBeEnabled();
+  expect(await screen.findByRole("button", { name: "Upload your data" })).toBeEnabled();
   expect(screen.queryByText(/\d+ rows/i)).not.toBeInTheDocument();
 });
 
@@ -32,8 +32,14 @@ test("runs empty state has no fabricated executions", async () => {
   expect(await screen.findByText("No run records yet")).toBeInTheDocument();
 });
 
-test("exports empty state lists planned formats only", async () => {
+test("exports empty state does not advertise a working download", async () => {
   renderApp(["/exports"]);
-  expect(await screen.findAllByText("Not generated")).toHaveLength(3);
-  expect(screen.getByText("CSV")).toBeInTheDocument();
+  expect(
+    await screen.findByText(/not available in this version of FACILIO/i),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Go Home" })).toHaveAttribute(
+    "href",
+    "/overview",
+  );
+  expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
 });

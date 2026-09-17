@@ -24,10 +24,10 @@ export function workflowStatusLabel(status: WorkflowStatus): string {
 }
 
 export function jobStatusLabel(status: string): string {
-  if (status === "QUEUED") return "Waiting to start";
+  if (status === "QUEUED") return "Waiting";
   if (status === "RUNNING") return "Running";
-  if (status === "SUCCEEDED") return "Done";
-  if (status === "FAILED") return "Couldn't finish";
+  if (status === "SUCCEEDED") return "Completed";
+  if (status === "FAILED") return "Needs attention";
   if (status === "CANCEL_REQUESTED") return "Stopping";
   if (status === "CANCELLED") return "Cancelled";
   if (status === "PENDING") return "Waiting";

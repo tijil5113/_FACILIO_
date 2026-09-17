@@ -16,7 +16,7 @@ import type {
 } from "@/types/dataset";
 
 const ACCEPTED = [".csv", ".xlsx", ".json"];
-const ACCEPTED_LABEL = "CSV, XLSX, and JSON";
+const ACCEPTED_LABEL = "CSV, Excel, and JSON";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

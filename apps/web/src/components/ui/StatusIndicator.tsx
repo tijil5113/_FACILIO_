@@ -8,6 +8,7 @@ interface StatusIndicatorProps {
   description?: string;
   compact?: boolean;
   pulse?: boolean;
+  hideLabel?: boolean;
 }
 
 const dots: Record<StatusTone, string> = {
@@ -24,6 +25,7 @@ export function StatusIndicator({
   description,
   compact = false,
   pulse = false,
+  hideLabel = false,
 }: StatusIndicatorProps) {
   return (
     <span className={cn("inline-flex items-center gap-2", compact && "gap-1.5")}>
@@ -35,7 +37,11 @@ export function StatusIndicator({
         )}
         aria-hidden="true"
       />
-      <span className={cn("text-sm text-ink", compact && "text-xs")}>{label}</span>
+      <span
+        className={cn("text-sm text-ink", compact && "text-xs", hideLabel && "sr-only")}
+      >
+        {label}
+      </span>
       {description ? <span className="sr-only">{description}</span> : null}
     </span>
   );

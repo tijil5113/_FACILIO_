@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Self
@@ -50,6 +51,21 @@ def _env_file_database_backend(path: Path) -> str | None:
             return "SQLite"
         return backend
     return None
+
+
+def _prefer_canonical_database_url() -> None:
+    """Stop Flask's cwd .env from forcing SQLite over the root PostgreSQL URL."""
+    if _env_file_database_backend(canonical_env_file()) != "PostgreSQL":
+        return
+    current = os.environ.get("DATABASE_URL", "").strip()
+    if not current:
+        return
+    try:
+        backend = make_url(current).get_backend_name()
+    except Exception:
+        return
+    if backend == "sqlite":
+        os.environ.pop("DATABASE_URL", None)
 
 
 class Settings(BaseSettings):
@@ -179,6 +195,7 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    _prefer_canonical_database_url()
     return Settings()
 
 

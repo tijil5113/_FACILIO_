@@ -120,10 +120,10 @@ Backend enums **do not change**. UI maps:
 
 | Backend | Beginner UI | Notes |
 | --- | --- | --- |
-| QUEUED | Waiting to start | |
+| QUEUED | Waiting | |
 | RUNNING | Running | |
-| SUCCEEDED | Done | |
-| FAILED | Couldn’t finish | |
+| SUCCEEDED | Completed | Output version is the evidence of success. |
+| FAILED | Needs attention | |
 | CANCEL_REQUESTED | Stopping | Not cancelled yet |
 | CANCELLED | Cancelled | |
 

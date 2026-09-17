@@ -10,6 +10,7 @@ export function useHealthQuery() {
     queryKey: healthQueryKey,
     queryFn: fetchHealth,
     retry: false,
+    refetchInterval: 15000,
   });
 }
 
@@ -18,5 +19,6 @@ export function useReadinessQuery() {
     queryKey: readinessQueryKey,
     queryFn: fetchReadiness,
     retry: false,
+    refetchInterval: 15000,
   });
 }

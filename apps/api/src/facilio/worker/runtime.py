@@ -24,8 +24,8 @@ def process_job(job_id: str) -> None:
         JobExecutor(settings, database, worker_id=default_worker_id()).execute(job_id)
 
 
-def recover_stale_jobs() -> int:
-    app = _worker_app()
+def recover_stale_jobs(app=None) -> int:
+    app = app or _worker_app()
     with app.app_context():
         from facilio.services.jobs import JobService
 
@@ -36,6 +36,7 @@ def recover_stale_jobs() -> int:
 
 
 _APP = None
+_RECOVER_LOCK = threading.Lock()
 
 
 def _worker_app():
@@ -66,7 +67,9 @@ def main(argv: list[str] | None = None) -> int:
     import redis
     from rq import Queue, Worker
 
+    global _APP
     app = create_app(settings)
+    _APP = app
     connection = redis.from_url(settings.REDIS_URL)
     queue = Queue(settings.JOB_QUEUE_NAME, connection=connection)
     worker_id = default_worker_id()
@@ -88,11 +91,10 @@ def main(argv: list[str] | None = None) -> int:
 
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
-    with app.app_context():
-        try:
-            recover_stale_jobs()
-        except Exception:
-            logger.exception("stale job recovery failed at startup")
+    try:
+        recover_stale_jobs(app)
+    except Exception:
+        logger.exception("stale job recovery failed at startup")
     logger.info(
         "worker starting queue=%s worker_id=%s database=%s heartbeat_s=%s",
         settings.JOB_QUEUE_NAME,
@@ -118,10 +120,19 @@ def _beat(app, settings, worker_id: str) -> None:
         JobExecutor(
             settings, app.extensions["database"], worker_id=worker_id
         ).heartbeat_worker()
-        try:
-            recover_stale_jobs()
-        except Exception:
-            logger.exception("stale job recovery failed during heartbeat")
+    _try_recover(app)
+
+
+def _try_recover(app) -> None:
+    if not _RECOVER_LOCK.acquire(blocking=False):
+        logger.warning("stale job recovery skipped; previous recovery still running")
+        return
+    try:
+        recover_stale_jobs(app)
+    except Exception:
+        logger.exception("stale job recovery failed during heartbeat")
+    finally:
+        _RECOVER_LOCK.release()
 
 
 if __name__ == "__main__":

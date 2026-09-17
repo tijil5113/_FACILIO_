@@ -39,11 +39,11 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
   },
   UNSUPPORTED_FILE_TYPE: {
     title: "We couldn't add this file",
-    explanation: "Supported formats are CSV, XLSX, and JSON.",
+    explanation: "FACILIO supports CSV, Excel and JSON files.",
     consequence: "The file wasn't added.",
     retrySafe: true,
-    learnHref: "/learn#data",
-    learnLabel: "Understand your data",
+    learnHref: "/learn#bring",
+    learnLabel: "Bring in your data",
     dataSafety: "not-added",
   },
   FILE_TOO_LARGE: {
@@ -51,6 +51,8 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     explanation: "The file is larger than FACILIO's current upload limit.",
     consequence: "The file wasn't added.",
     retrySafe: true,
+    learnHref: "/learn#bring",
+    learnLabel: "Bring in your data",
     dataSafety: "not-added",
   },
   EMPTY_FILE: {
@@ -73,8 +75,8 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence:
       "The file wasn't added. Try saving the file as UTF-8 and upload it again.",
     retrySafe: true,
-    learnHref: "/learn#data",
-    learnLabel: "Understand your data",
+    learnHref: "/learn#bring",
+    learnLabel: "Bring in your data",
     dataSafety: "not-added",
   },
   INVALID_JSON: {
@@ -120,7 +122,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
       "No cleaned version was created. Review the latest version and preview again.",
     retrySafe: true,
     learnHref: "/learn#cleaning",
-    learnLabel: "Cleaning safely",
+    learnLabel: "Clean safely",
     dataSafety: "not-created",
   },
   CLEANUP_NOOP: {
@@ -130,7 +132,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     severity: "info",
     retrySafe: false,
     learnHref: "/learn#cleaning",
-    learnLabel: "Cleaning safely",
+    learnLabel: "Clean safely",
     dataSafety: "not-created",
   },
   TRANSFORMATION_NOOP: {
@@ -156,7 +158,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     severity: "warning",
     retrySafe: false,
     learnHref: "/learn#cleaning",
-    learnLabel: "Cleaning safely",
+    learnLabel: "Clean safely",
     dataSafety: "not-created",
   },
   CLEANUP_INVALID: {
@@ -165,7 +167,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence: "No cleaned version was created.",
     retrySafe: false,
     learnHref: "/learn#cleaning",
-    learnLabel: "Cleaning safely",
+    learnLabel: "Clean safely",
     dataSafety: "not-created",
   },
   INVALID_TRANSFORMATION_PARAMETERS: {
@@ -181,7 +183,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence: "No cleaned version was created.",
     retrySafe: true,
     learnHref: "/learn#cleaning",
-    learnLabel: "Cleaning safely",
+    learnLabel: "Clean safely",
     dataSafety: "not-created",
   },
   PREVIEW_FAILED: {
@@ -213,7 +215,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence: "No cleaned version was created. Your input version is unchanged.",
     retrySafe: true,
     learnHref: "/learn#cleaning",
-    learnLabel: "Cleaning safely",
+    learnLabel: "Clean safely",
     dataSafety: "not-created",
   },
   WORKFLOW_EXECUTION_FAILED: {
@@ -236,7 +238,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence: "No changes were made.",
     retrySafe: false,
     learnHref: "/learn#cleaning",
-    learnLabel: "Cleaning safely",
+    learnLabel: "Clean safely",
     dataSafety: "unchanged",
   },
   UNSUPPORTED_TRANSFORMATION: {
@@ -252,7 +254,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence: "No cleaned version was created.",
     retrySafe: false,
     learnHref: "/learn#cleanups",
-    learnLabel: "Reusable Cleanups",
+    learnLabel: "Reuse a Cleanup",
     dataSafety: "not-created",
   },
   INCOMPATIBLE_COLUMN_TYPE: {
@@ -268,7 +270,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence: "Nothing was run against your data.",
     retrySafe: false,
     learnHref: "/learn#cleanups",
-    learnLabel: "Reusable Cleanups",
+    learnLabel: "Reuse a Cleanup",
     dataSafety: "unchanged",
   },
   WORKFLOW_EMPTY: {
@@ -284,7 +286,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence: "No cleaned version was created.",
     retrySafe: false,
     learnHref: "/learn#cleanups",
-    learnLabel: "Reusable Cleanups",
+    learnLabel: "Reuse a Cleanup",
     dataSafety: "not-created",
   },
   VERSION_NOT_FOUND: {
@@ -293,7 +295,7 @@ export const ERROR_MAP: Record<string, ErrorMapEntry> = {
     consequence: "No additional version was created.",
     retrySafe: false,
     learnHref: "/learn#versions",
-    learnLabel: "Versions and your original",
+    learnLabel: "Understand versions",
     dataSafety: "unchanged",
   },
   DATASET_NOT_FOUND: {

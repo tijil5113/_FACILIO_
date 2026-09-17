@@ -54,7 +54,7 @@ python -m facilio.worker recover
 
 The worker creates a Flask application **without** serving HTTP, claims the job with a row lock (`SELECT … FOR UPDATE`), loads the **WorkflowRun snapshot** (not the latest editable Cleanup), and calls `execute_pipeline` → `apply_transformation`.
 
-A single `HeartbeatLoop` thread updates worker `last_seen` immediately and then every `WORKER_HEARTBEAT_SECONDS` until shutdown. Heartbeat is not signal-only.
+A single `HeartbeatLoop` thread updates worker `last_seen` immediately and then every `WORKER_HEARTBEAT_SECONDS` until shutdown. Heartbeat is not signal-only. Stale-job recovery runs after each beat on a non-blocking lock so a hung recovery cannot stop heartbeats. `GET /api/v1/operations/health` treats a worker as available if a fresh database heartbeat **or** a live RQ worker on the job queue is present.
 
 RQ finishes the current job on SIGTERM/SIGINT; FACILIO then marks the worker heartbeat `STOPPING`. Database sessions are opened per unit of work and closed.
 

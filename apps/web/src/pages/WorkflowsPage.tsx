@@ -1,30 +1,33 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Callout } from "@/components/ui/Callout";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { TechnicalDetails } from "@/components/ui/TechnicalDetails";
+import { Table } from "@/components/ui/Table";
+import { TableSkeleton } from "@/components/ui/Skeleton";
+import { Textarea } from "@/components/ui/Textarea";
+import { RecoveryMessage } from "@/features/recovery/RecoveryMessage";
+import { mapRecoveryError } from "@/features/recovery/map-error";
 import {
   useCreateWorkflowMutation,
   useWorkflowsQuery,
 } from "@/features/workflows/queries";
 import { FirstUseCue } from "@/features/onboarding/FirstUseCue";
 import { LearnMoreLink } from "@/features/learn/LearnMoreLink";
-import { formatDateTime } from "@/lib/format";
-import { jobStatusLabel, workflowStatusLabel } from "@/lib/status-labels";
+import { activityStatusLabel } from "@/lib/activity-outcome";
+import { formatRelativeTime } from "@/lib/format";
+import { workflowStatusLabel } from "@/lib/status-labels";
 import type { WorkflowStatus } from "@/types/workflows";
 
-const statusTone: Record<WorkflowStatus, "success" | "danger" | "warning" | "neutral"> = {
-  READY: "success",
-  INVALID: "danger",
-  DRAFT: "warning",
-  ARCHIVED: "neutral",
+const statusTone: Record<WorkflowStatus, string> = {
+  READY: "text-ink",
+  INVALID: "text-warning",
+  DRAFT: "text-ink-muted",
+  ARCHIVED: "text-ink-muted",
 };
 
 export function WorkflowsPage() {
@@ -44,40 +47,63 @@ export function WorkflowsPage() {
         setCreateOpen(true);
       }}
     >
-      New cleanup
+      New Cleanup
     </Button>
   );
 
   return (
-    <div className="page-enter mx-auto max-w-5xl space-y-6">
-      <FirstUseCue cue="cleanups" title="Saved cleanups">
-        Cleanups let you reuse a set of steps.
+    <div className="page-enter mx-auto content-page space-y-6">
+      <FirstUseCue cue="cleanups" title="Saved Cleanups">
+        A Cleanup is a saved set of cleaning steps you can use again.
       </FirstUseCue>
       {list.isLoading ? (
-        <div aria-busy="true" className="space-y-3">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-64 w-full" />
+        <div aria-busy="true" className="space-y-4">
+          <PageHeader
+            title="Cleanups"
+            description="Save cleaning steps you use repeatedly and apply them again when you need them."
+            actions={createButton}
+          />
+          <TableSkeleton rows={6} />
         </div>
       ) : list.isError ? (
-        <Callout tone="danger" title="Cleanups unavailable">
-          Saved Cleanups could not be loaded. Nothing was changed.
-        </Callout>
+        <>
+          <PageHeader
+            title="Cleanups"
+            description="Save cleaning steps you use repeatedly and apply them again when you need them."
+          />
+          <RecoveryMessage
+            experience={mapRecoveryError(list.error, {
+              operation: "load",
+              action: "Load cleanups",
+            })}
+            actions={
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  void list.refetch();
+                }}
+              >
+                Try again
+              </Button>
+            }
+          />
+        </>
       ) : empty ? (
         <EmptyState
           title="Cleanups"
-          summary="Save cleanup steps and use them again on matching data."
-          detail="A cleanup is a list of steps you can run later. Your original dataset stays unchanged; a successful run creates a new version."
-          visual={
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-medium text-ink-secondary">Saved cleanups</p>
-                {createButton}
-              </div>
-              <p className="text-sm text-ink-muted">No saved cleanups yet</p>
-            </div>
+          summary="Save cleaning steps you use repeatedly and apply them again when you need them."
+          detail="No Cleanups yet. Save steps from Guided Cleanup or create a Cleanup to reuse them later."
+          actions={
+            <>
+              {createButton}
+              <ButtonLink variant="secondary" to="/datasets">
+                Open a dataset
+              </ButtonLink>
+            </>
           }
         >
-          <p className="mt-4">
+          <p>
             <LearnMoreLink to="/learn#cleanups">What is a Cleanup?</LearnMoreLink>
           </p>
         </EmptyState>
@@ -85,54 +111,54 @@ export function WorkflowsPage() {
         <>
           <PageHeader
             title="Cleanups"
-            description="Save cleanup steps and use them again on matching data."
+            description="Save cleaning steps you use repeatedly and apply them again when you need them."
             actions={createButton}
           />
-          <p>
-            <LearnMoreLink to="/learn#cleanups">What is a Cleanup?</LearnMoreLink>
-          </p>
-          <div className="overflow-hidden rounded-[var(--facilio-radius-md)] border border-line">
-            <table className="w-full text-left text-sm">
-              <caption className="sr-only">Saved cleanups</caption>
-              <thead className="bg-subtle font-mono text-[11px] tracking-[0.08em] text-ink-muted uppercase">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Cleanup</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Steps</th>
-                  <th className="px-4 py-2 font-medium">Last run</th>
-                  <th className="px-4 py-2 font-medium">Updated</th>
+          <Table caption="Saved Cleanups">
+            <thead>
+              <tr>
+                <th>Cleanup</th>
+                <th>Steps</th>
+                <th>Last run</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.items.map((item) => (
+                <tr key={item.id} data-interactive="true">
+                  <td className="max-w-[22rem] font-medium text-ink">
+                    <Link
+                      to={`/workflows/${item.id}`}
+                      className="block truncate hover:underline focus-visible:underline"
+                      title={item.name}
+                    >
+                      {item.name}
+                    </Link>
+                    <span
+                      className={`type-caption mt-0.5 block ${statusTone[item.status]}`}
+                    >
+                      {workflowStatusLabel(item.status)}
+                    </span>
+                  </td>
+                  <td className="tabular-nums text-ink-secondary">
+                    {item.enabled_step_count}
+                  </td>
+                  <td className="text-ink-secondary">
+                    {item.last_run_status
+                      ? `${activityStatusLabel(item.last_run_status)}${
+                          item.last_run_at
+                            ? ` · ${formatRelativeTime(item.last_run_at)}`
+                            : ""
+                        }`
+                      : "—"}
+                  </td>
+                  <td className="text-ink-secondary">
+                    {formatRelativeTime(item.updated_at)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {data?.items.map((item) => (
-                  <tr key={item.id} className="border-t border-line hover:bg-subtle">
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/workflows/${item.id}`}
-                        className="font-medium text-ink hover:underline"
-                      >
-                        {item.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={statusTone[item.status]}>
-                        {workflowStatusLabel(item.status)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-ink-secondary">
-                      {item.enabled_step_count}/{item.step_count}
-                    </td>
-                    <td className="px-4 py-3 text-ink-secondary">
-                      {item.last_run_status ? jobStatusLabel(item.last_run_status) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-ink-secondary">
-                      {formatDateTime(item.updated_at)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </Table>
           {data && data.total > data.page_size ? (
             <div className="flex justify-end gap-2">
               <Button
@@ -161,7 +187,7 @@ export function WorkflowsPage() {
       )}
       <Dialog
         open={createOpen}
-        title="New cleanup"
+        title="New Cleanup"
         onClose={() => {
           setCreateOpen(false);
         }}
@@ -183,30 +209,37 @@ export function WorkflowsPage() {
             );
           }}
         >
-          <h2 className="text-base font-semibold text-ink">New cleanup</h2>
+          <h2 className="type-card-title text-ink">New Cleanup</h2>
+          <p className="type-body-sm text-ink-secondary">
+            Name this Cleanup, then add ordered cleaning steps.
+          </p>
           <Input
             id="workflow-name"
             label="Name"
             value={name}
             required
+            maxLength={200}
             onChange={(event) => {
               setName(event.target.value);
             }}
           />
-          <Input
+          <Textarea
             id="workflow-description"
             label="Description"
             value={description}
+            maxLength={4000}
             onChange={(event) => {
               setDescription(event.target.value);
             }}
           />
-          <TechnicalDetails>
-            <p>
-              This creates a Cleanup. You add steps next. Running it later creates a new
-              dataset version and does not overwrite the original.
-            </p>
-          </TechnicalDetails>
+          {create.isError ? (
+            <RecoveryMessage
+              experience={mapRecoveryError(create.error, {
+                operation: "save-cleanup",
+                action: "Create cleanup",
+              })}
+            />
+          ) : null}
           <div className="flex justify-end gap-2">
             <Button
               variant="ghost"
@@ -218,7 +251,7 @@ export function WorkflowsPage() {
               Cancel
             </Button>
             <Button type="submit" disabled={!name.trim() || create.isPending}>
-              {create.isPending ? "Creating…" : "Create cleanup"}
+              {create.isPending ? "Creating…" : "Create Cleanup"}
             </Button>
           </div>
         </form>

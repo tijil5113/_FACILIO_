@@ -16,7 +16,7 @@ test("command palette opens from the context bar and navigates", async () => {
   expect(
     await screen.findByRole("dialog", { name: "Command palette" }),
   ).toBeInTheDocument();
-  await user.click(screen.getByRole("option", { name: "Go to Datasets" }));
+  await user.click(screen.getByRole("option", { name: "Open Datasets" }));
   expect(await screen.findByRole("heading", { name: "Datasets" })).toBeInTheDocument();
 });
 
@@ -27,9 +27,7 @@ test("command palette filters commands and supports keyboard run", async () => {
   const search = await screen.findByLabelText("Commands");
   await user.type(search, "settings");
   expect(screen.getByRole("option", { name: "Go to Settings" })).toBeInTheDocument();
-  expect(
-    screen.queryByRole("option", { name: "Go to Datasets" }),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("option", { name: "Open Datasets" })).not.toBeInTheDocument();
   await user.keyboard("{Enter}");
   expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
 });

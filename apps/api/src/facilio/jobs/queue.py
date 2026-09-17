@@ -22,6 +22,8 @@ class JobQueue(Protocol):
 
     def contains(self, job_id: str) -> bool: ...
 
+    def live_workers(self) -> int: ...
+
     def backend(self) -> str: ...
 
 
@@ -46,6 +48,9 @@ class MemoryJobQueue:
 
     def contains(self, job_id: str) -> bool:
         return job_id in self.items
+
+    def live_workers(self) -> int:
+        return 0
 
     def backend(self) -> str:
         return "memory"
@@ -98,6 +103,15 @@ class RedisJobQueue:
         except Exception:
             logger.warning("queue contains check failed job_id=%s", job_id)
             return False
+
+    def live_workers(self) -> int:
+        try:
+            from rq import Worker
+
+            return len(Worker.all(queue=self._queue))
+        except Exception:
+            logger.warning("queue live worker count failed queue=%s", self._queue_name)
+            return 0
 
     def backend(self) -> str:
         return "redis"

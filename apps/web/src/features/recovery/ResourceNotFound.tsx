@@ -1,7 +1,6 @@
-import { Link } from "react-router";
-
 import { RecoveryMessage } from "@/features/recovery/RecoveryMessage";
 import { resourceNotFoundExperience } from "@/features/recovery/map-error";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 
 interface ResourceNotFoundProps {
   resource: "dataset" | "cleanup" | "activity";
@@ -19,18 +18,13 @@ export function ResourceNotFound({ resource, error }: ResourceNotFoundProps) {
   const destination = DESTINATIONS[resource];
   return (
     <section className="page-enter mx-auto max-w-xl space-y-4">
-      <h1 className="text-[22px] font-semibold tracking-tight text-ink">
-        {experience.title}
-      </h1>
+      <h1 className="type-page-title text-ink">{experience.title}</h1>
       <RecoveryMessage
         experience={experience}
         actions={
-          <Link
-            to={destination.to}
-            className="inline-flex h-8 items-center rounded-[var(--facilio-radius-md)] border border-ink bg-ink px-3 text-sm font-medium text-canvas hover:bg-ink/90 dark:text-[#121410]"
-          >
+          <ButtonLink to={destination.to} size="sm">
             {destination.label}
-          </Link>
+          </ButtonLink>
         }
       />
     </section>

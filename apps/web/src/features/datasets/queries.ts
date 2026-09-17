@@ -137,6 +137,7 @@ export function useDeleteDatasetMutation() {
       queryClient.removeQueries({ queryKey: datasetKeys.profile(datasetId) });
       await queryClient.invalidateQueries({ queryKey: datasetKeys.all });
       await queryClient.invalidateQueries({ queryKey: qualityKeys.overview });
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.summary });
     },
   });
 }
@@ -175,6 +176,7 @@ export function useProfileDatasetMutation(datasetId: string, versionId?: string)
       await queryClient.invalidateQueries({ queryKey: datasetKeys.detail(datasetId) });
       await queryClient.invalidateQueries({ queryKey: datasetKeys.all });
       await queryClient.invalidateQueries({ queryKey: qualityKeys.overview });
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.summary });
       await queryClient.invalidateQueries({
         queryKey: [...datasetKeys.all, "issues", datasetId],
       });
@@ -287,6 +289,7 @@ export function useSetCurrentVersionMutation(datasetId: string) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: datasetKeys.all });
       await queryClient.invalidateQueries({ queryKey: qualityKeys.overview });
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.summary });
     },
   });
 }

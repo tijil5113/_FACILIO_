@@ -1,48 +1,85 @@
 import { Tooltip } from "@/components/ui/Tooltip";
+import {
+  columnTypeLabel,
+  dtypeLabel,
+  isNumericDtype,
+} from "@/features/datasets/dtype-labels";
+import { formatCount } from "@/lib/format";
 import type { ColumnDtype, DatasetPreview } from "@/types/dataset";
 
 interface PreviewGridProps {
   preview: DatasetPreview;
+  totalRows?: number | null;
+  totalColumns?: number | null;
+  detectedTypes?: Record<string, string>;
 }
 
-export function PreviewGrid({ preview }: PreviewGridProps) {
+export function PreviewGrid({
+  preview,
+  totalRows,
+  totalColumns,
+  detectedTypes,
+}: PreviewGridProps) {
   if (preview.column_count === 0) {
     return (
-      <p className="text-sm text-ink-secondary">
-        This dataset has no columns to preview.
+      <p className="type-body text-ink-secondary">
+        This version has no columns to preview.
       </p>
     );
   }
   if (preview.row_count === 0) {
     return (
-      <p className="text-sm text-ink-secondary">
-        This dataset has a header but no data rows. Source values were not altered.
+      <p className="type-body text-ink-secondary">
+        This version has a header but no data rows. Source values were not altered.
       </p>
     );
   }
 
+  const rowTotal = totalRows ?? preview.row_count;
+  const columnTotal = totalColumns ?? preview.column_count;
+  const showingRows = preview.preview_row_count || preview.rows.length;
+  const bounded = preview.truncated_rows || preview.truncated_columns;
+  const wide = preview.columns.length > 8 || preview.truncated_columns;
+
   return (
-    <div className="min-w-0 overflow-hidden rounded-[var(--facilio-radius-md)] border border-line">
-      <div className="max-h-[28rem] overflow-auto">
-        <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+    <div className="space-y-2">
+      <p className="type-caption text-ink-muted" role="status">
+        {bounded
+          ? `Preview of ${formatCount(showingRows)} of ${formatCount(rowTotal)} rows`
+          : `Showing all ${formatCount(rowTotal)} rows`}
+        {preview.truncated_columns
+          ? ` · ${formatCount(preview.columns.length)} of ${formatCount(columnTotal)} columns shown`
+          : ` · ${formatCount(columnTotal)} columns`}
+        {wide ? " · Scroll sideways to see more columns" : ""}.
+      </p>
+      <div className="preview-table-wrap">
+        <table className="preview-table">
           <caption className="sr-only">
-            Dataset preview. Missing values are shown as blank.
+            Dataset preview. Missing cells are labeled Missing. Empty strings are labeled
+            Blank. Zero and false are data values.
           </caption>
-          <thead className="sticky top-0 z-10 bg-subtle">
+          <thead>
             <tr>
-              <th className="sticky left-0 z-20 border-b border-line bg-subtle px-2 py-2 font-mono text-[11px] text-ink-muted">
-                #
+              <th scope="col" className="preview-row-head">
+                <span className="sr-only">Preview row</span>
+                <span aria-hidden="true">#</span>
               </th>
               {preview.columns.map((column) => (
                 <th
                   key={`${String(column.index)}-${column.name}`}
-                  className="border-b border-line px-3 py-2 font-medium whitespace-nowrap text-ink"
+                  scope="col"
+                  className="preview-col-head"
                 >
-                  <span className="block max-w-[14rem] truncate">
+                  <span
+                    className="block max-w-[14rem] truncate"
+                    title={column.name || "(blank)"}
+                  >
                     {column.name || "(blank)"}
                   </span>
-                  <span className="text-[10px] tracking-wide text-ink-muted uppercase">
-                    {column.dtype}
+                  <span className="type-caption font-normal tracking-normal text-ink-muted normal-case">
+                    {detectedTypes?.[column.name]
+                      ? columnTypeLabel(detectedTypes[column.name] ?? "")
+                      : dtypeLabel(column.dtype)}
                   </span>
                 </th>
               ))}
@@ -50,38 +87,28 @@ export function PreviewGrid({ preview }: PreviewGridProps) {
           </thead>
           <tbody>
             {preview.rows.map((row, rowIndex) => (
-              <tr key={rowIndex} className="odd:bg-surface even:bg-raised">
-                <td className="sticky left-0 border-b border-line bg-inherit px-2 py-1.5 font-mono text-[11px] text-ink-muted">
+              <tr key={rowIndex}>
+                <th scope="row" className="preview-row-num">
                   {rowIndex + 1}
-                </td>
-                {row.map((cell, cellIndex) => (
-                  <td
-                    key={cellIndex}
-                    className={`max-w-[16rem] border-b border-line px-3 py-1.5 whitespace-nowrap ${
-                      preview.columns[cellIndex]?.dtype === "integer" ||
-                      preview.columns[cellIndex]?.dtype === "decimal"
-                        ? "text-right tabular-nums"
-                        : ""
-                    }`}
-                  >
-                    <PreviewCell
-                      value={cell}
-                      dtype={preview.columns[cellIndex]?.dtype ?? "unknown"}
-                    />
-                  </td>
-                ))}
+                </th>
+                {row.map((cell, cellIndex) => {
+                  const dtype = preview.columns[cellIndex]?.dtype ?? "unknown";
+                  return (
+                    <td
+                      key={cellIndex}
+                      className={
+                        isNumericDtype(dtype) ? "text-right tabular-nums" : undefined
+                      }
+                    >
+                      <PreviewCell value={cell} dtype={dtype} />
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {(preview.truncated_rows || preview.truncated_columns) && (
-        <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">
-          Preview is bounded
-          {preview.truncated_rows ? " · additional rows omitted" : ""}
-          {preview.truncated_columns ? " · additional columns omitted" : ""}.
-        </p>
-      )}
     </div>
   );
 }
@@ -89,11 +116,15 @@ export function PreviewGrid({ preview }: PreviewGridProps) {
 function PreviewCell({ value, dtype }: { value: unknown; dtype: ColumnDtype }) {
   if (value === null || value === undefined) {
     return (
-      <span
-        className="font-mono text-[11px] tracking-wide text-ink-muted"
-        title="Missing value"
-      >
-        (blank)
+      <span className="preview-cell-missing" title="Missing value">
+        Missing
+      </span>
+    );
+  }
+  if (value === "") {
+    return (
+      <span className="preview-cell-blank" title="Blank value">
+        Blank
       </span>
     );
   }
@@ -103,7 +134,7 @@ function PreviewCell({ value, dtype }: { value: unknown; dtype: ColumnDtype }) {
   if (truncated) {
     return (
       <Tooltip label={text} side="bottom">
-        <span className="block truncate text-ink">{display}</span>
+        <span className="block max-w-[16rem] truncate text-ink">{display}</span>
       </Tooltip>
     );
   }

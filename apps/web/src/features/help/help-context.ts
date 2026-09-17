@@ -21,6 +21,7 @@ export type HelpContextId =
 export interface HelpContent {
   id: HelpContextId;
   title: string;
+  question: string;
   summary: string;
   actions: string[];
   goodToKnow: string[];
@@ -35,7 +36,7 @@ function datasetTab(search: string): string | null {
 }
 
 export function detectHelpContext(pathname: string, search = ""): HelpContextId {
-  if (pathname === "/overview" || pathname === "/") {
+  if (pathname === "/overview") {
     return "home";
   }
   if (pathname === "/datasets") {

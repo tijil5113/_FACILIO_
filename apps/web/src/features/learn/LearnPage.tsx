@@ -1,27 +1,39 @@
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, type ComponentType } from "react";
 import { useLocation } from "react-router";
 
 import { LearnHome } from "./LearnHome";
 import { LearnNavigation } from "./LearnNavigation";
-import {
-  ActivityModule,
-  CleanSafelyModule,
-  CleanupsModule,
-  FindProblemsModule,
-  TwoMinuteModule,
-  UnderstandDataModule,
-  VersionsModule,
-} from "./LearnModules";
+import { ActivityModule } from "./modules/ActivityModule";
+import { BringDataModule } from "./modules/BringDataModule";
+import { CleaningModule } from "./modules/CleaningModule";
+import { CleanupsModule } from "./modules/CleanupsModule";
+import { MinuteModule } from "./modules/MinuteModule";
+import { ProblemsModule } from "./modules/ProblemsModule";
+import { QualityModule } from "./modules/QualityModule";
+import { UnderstandDatasetModule } from "./modules/UnderstandDatasetModule";
+import { VersionsModule } from "./modules/VersionsModule";
 import { sectionIdFromHash, topicIdForSection } from "./learn-topics";
+
+const MODULES: Record<string, ComponentType> = {
+  start: MinuteModule,
+  bring: BringDataModule,
+  data: UnderstandDatasetModule,
+  quality: QualityModule,
+  problems: ProblemsModule,
+  cleaning: CleaningModule,
+  versions: VersionsModule,
+  cleanups: CleanupsModule,
+  activity: ActivityModule,
+};
 
 export function LearnPage() {
   const location = useLocation();
   const sectionId = sectionIdFromHash(location.hash);
   const activeTopicId = topicIdForSection(sectionId);
+  const Module = sectionId === "home" ? null : MODULES[sectionId];
 
   useLayoutEffect(() => {
-    const raw = location.hash.replace(/^#/, "");
-    if (!raw) {
+    if (sectionId === "home") {
       return;
     }
     const target = document.getElementById(sectionId);
@@ -45,16 +57,7 @@ export function LearnPage() {
         <aside className="lg:sticky lg:top-20 lg:self-start">
           <LearnNavigation activeTopicId={activeTopicId} />
         </aside>
-        <div className="min-w-0 space-y-16">
-          <LearnHome />
-          <TwoMinuteModule />
-          <UnderstandDataModule />
-          <FindProblemsModule />
-          <CleanSafelyModule />
-          <VersionsModule />
-          <CleanupsModule />
-          <ActivityModule />
-        </div>
+        <div className="min-w-0">{Module ? <Module /> : <LearnHome />}</div>
       </div>
     </div>
   );

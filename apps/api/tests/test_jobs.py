@@ -491,6 +491,7 @@ def test_redis_queue_ping_and_enqueue_failure(monkeypatch) -> None:
     assert queue.ping() is False
     assert queue.queued_count() == 2
     assert queue.backend() == "redis"
+    assert queue.live_workers() == 0
     try:
         queue.enqueue(str(uuid4()))
     except Exception as error:
@@ -531,3 +532,80 @@ def test_heartbeat_loop_beats_more_than_once_then_stops() -> None:
     loop.stop()
     assert loop.beats == frozen
     assert loop._thread is None
+
+
+def test_redis_queue_counts_live_workers(monkeypatch) -> None:
+    import rq
+
+    from facilio.jobs.queue import RedisJobQueue
+
+    class FakeRedis:
+        def ping(self):
+            return True
+
+    class FakeQueue:
+        def __init__(self, *_args, **_kwargs):
+            self.count = 0
+            self.jobs = []
+
+    monkeypatch.setattr("redis.from_url", lambda _url: FakeRedis())
+    monkeypatch.setattr("rq.Queue", FakeQueue)
+
+    @classmethod
+    def fake_all(_cls, **_kwargs):
+        return [object(), object()]
+
+    monkeypatch.setattr(rq.Worker, "all", fake_all)
+    queue = RedisJobQueue("redis://localhost:6379/0", "workflows")
+    assert queue.live_workers() == 2
+
+
+def test_operations_health_treats_live_queue_workers_as_available(
+    tmp_path: Path,
+) -> None:
+    client, app = _client(tmp_path)
+
+    class LiveQueue:
+        def enqueue(self, job_id: str) -> None:
+            return None
+
+        def ping(self) -> bool:
+            return True
+
+        def queued_count(self) -> int | None:
+            return 0
+
+        def contains(self, job_id: str) -> bool:
+            return False
+
+        def live_workers(self) -> int:
+            return 1
+
+        def backend(self) -> str:
+            return "redis"
+
+    app.extensions["job_queue"] = LiveQueue()
+    health = client.get("/api/v1/operations/health").get_json()["data"]
+    assert health["worker"]["status"] == "available"
+    assert health["worker"]["available_count"] == 1
+
+
+def test_try_recover_skips_when_previous_recovery_is_running(
+    monkeypatch,
+) -> None:
+    from facilio.worker import runtime
+
+    called: list[int] = []
+    monkeypatch.setattr(
+        runtime, "recover_stale_jobs", lambda _app=None: called.append(1) or 0
+    )
+    acquired = runtime._RECOVER_LOCK.acquire(blocking=False)
+    try:
+        assert acquired
+        runtime._try_recover(object())
+        assert called == []
+    finally:
+        if acquired:
+            runtime._RECOVER_LOCK.release()
+    runtime._try_recover(object())
+    assert called == [1]

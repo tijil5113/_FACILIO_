@@ -7,50 +7,63 @@ export interface LearnTopic {
 export const LEARN_TOPICS: LearnTopic[] = [
   {
     id: "home",
-    label: "Start here",
-    description: "Learn FACILIO overview",
+    label: "Learn overview",
+    description: "Start here",
   },
   {
     id: "start",
-    label: "FACILIO in 2 minutes",
-    description: "The complete journey",
+    label: "FACILIO in a minute",
+    description: "The product in one pass",
+  },
+  {
+    id: "bring",
+    label: "Bring in your data",
+    description: "CSV, Excel, and JSON",
   },
   {
     id: "data",
-    label: "Understand your data",
-    description: "Datasets, rows, analysis",
+    label: "Understand your dataset",
+    description: "Rows, columns, and analysis",
+  },
+  {
+    id: "quality",
+    label: "Understand data quality",
+    description: "Scores from supported checks",
   },
   {
     id: "problems",
-    label: "Find problems",
-    description: "Problems and quality",
+    label: "Review problems",
+    description: "Findings worth reviewing",
   },
   {
     id: "cleaning",
     label: "Clean safely",
-    description: "Preview before a new version",
+    description: "Preview, then a new version",
   },
   {
     id: "versions",
-    label: "Versions and your original",
-    description: "Original stays available",
+    label: "Understand versions",
+    description: "Original, Viewing, and Using",
   },
   {
     id: "cleanups",
-    label: "Reusable cleanups",
-    description: "Saved steps you can run again",
+    label: "Reuse a Cleanup",
+    description: "Saved ordered steps",
   },
   {
     id: "activity",
-    label: "Activity and results",
-    description: "What ran and where it landed",
+    label: "Follow Activity",
+    description: "What FACILIO attempted",
   },
 ];
+
+export const LEARN_JOURNEY = LEARN_TOPICS.filter((topic) => topic.id !== "home");
 
 const HASH_TO_SECTION: Record<string, string> = {
   "": "home",
   home: "home",
   start: "start",
+  bring: "bring",
   data: "data",
   problems: "problems",
   quality: "quality",
@@ -63,9 +76,10 @@ const HASH_TO_SECTION: Record<string, string> = {
 const SECTION_TO_TOPIC: Record<string, string> = {
   home: "home",
   start: "start",
+  bring: "bring",
   data: "data",
   problems: "problems",
-  quality: "problems",
+  quality: "quality",
   cleaning: "cleaning",
   versions: "versions",
   cleanups: "cleanups",
@@ -86,4 +100,18 @@ export function learnPath(sectionId: string): string {
     return "/learn";
   }
   return `/learn#${sectionId}`;
+}
+
+export function adjacentTopics(topicId: string): {
+  previous: LearnTopic | null;
+  next: LearnTopic | null;
+} {
+  const index = LEARN_JOURNEY.findIndex((topic) => topic.id === topicId);
+  if (index < 0) {
+    return { previous: null, next: LEARN_JOURNEY[0] ?? null };
+  }
+  return {
+    previous: LEARN_JOURNEY[index - 1] ?? null,
+    next: LEARN_JOURNEY[index + 1] ?? null,
+  };
 }

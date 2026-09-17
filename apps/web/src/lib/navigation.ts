@@ -1,4 +1,4 @@
-import { BookOpen, Database, GitBranch, Home, Settings, Timer } from "lucide-react";
+import { BookOpen, Database, Home, ListOrdered, Settings, Timer } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface NavItem {
@@ -14,7 +14,7 @@ export interface NavSection {
   items: NavItem[];
 }
 
-export const primaryNav: NavItem[] = [
+export const workspaceNav: NavItem[] = [
   {
     label: "Home",
     to: "/overview",
@@ -30,7 +30,7 @@ export const primaryNav: NavItem[] = [
   {
     label: "Cleanups",
     to: "/workflows",
-    icon: GitBranch,
+    icon: ListOrdered,
     description: "Saved cleanup steps you can reuse",
   },
   {
@@ -45,6 +45,9 @@ export const primaryNav: NavItem[] = [
     icon: BookOpen,
     description: "Understand how FACILIO works",
   },
+];
+
+export const utilityNav: NavItem[] = [
   {
     label: "Settings",
     to: "/settings",
@@ -52,6 +55,8 @@ export const primaryNav: NavItem[] = [
     description: "Appearance and system status",
   },
 ];
+
+export const primaryNav: NavItem[] = [...workspaceNav, ...utilityNav];
 
 export const navSections: NavSection[] = [
   { id: "primary", heading: "", items: primaryNav },
@@ -85,4 +90,14 @@ export function titleForPath(pathname: string): string {
     return "Activity";
   }
   return pageTitles[pathname] ?? "FACILIO";
+}
+
+export function commandLabelForNav(item: NavItem): string {
+  if (item.to === "/overview") return "Go to Home";
+  if (item.to === "/datasets") return "Open Datasets";
+  if (item.to === "/workflows") return "Open Cleanups";
+  if (item.to === "/jobs") return "Open Activity";
+  if (item.to === "/learn") return "Go to Learn";
+  if (item.to === "/settings") return "Go to Settings";
+  return `Go to ${item.label}`;
 }

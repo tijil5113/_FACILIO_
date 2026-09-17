@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { LearnPager } from "./LearnPager";
+
 interface LearnModuleProps {
   id: string;
   eyebrow?: string;
@@ -9,7 +11,7 @@ interface LearnModuleProps {
 
 export function LearnModule({ id, eyebrow, title, children }: LearnModuleProps) {
   return (
-    <section id={id} className="scroll-mt-20 space-y-5" aria-labelledby={`${id}-heading`}>
+    <article id={id} className="scroll-mt-20 space-y-5" aria-labelledby={`${id}-heading`}>
       {eyebrow ? (
         <p className="font-mono text-[11px] tracking-[0.16em] text-ink-muted uppercase">
           {eyebrow}
@@ -19,6 +21,7 @@ export function LearnModule({ id, eyebrow, title, children }: LearnModuleProps) 
         {title}
       </h2>
       {children}
-    </section>
+      <LearnPager topicId={id} />
+    </article>
   );
 }

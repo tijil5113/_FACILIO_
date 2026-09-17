@@ -229,6 +229,7 @@ export function mockApi(options: {
   workflows?:
     { items: unknown[]; page: number; page_size: number; total: number } | "error";
   sample?: DatasetListResponse["items"][number] | "error";
+  operationsHealth?: "limited" | "error";
 }) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = requestUrl(input);
@@ -344,18 +345,22 @@ export function mockApi(options: {
       });
     }
     if (pathnameOf(url) === "/api/v1/operations/health") {
+      if (options.operationsHealth === "error") {
+        return Promise.reject(new TypeError("Failed to fetch"));
+      }
+      const limited = options.operationsHealth === "limited";
       return jsonResponse({
         success: true,
         data: {
           queue: {
-            status: "not_configured",
+            status: limited ? "unavailable" : "not_configured",
             backend: "memory",
             queued_count: 0,
             name: "workflows",
           },
           worker: {
-            status: "available",
-            available_count: 1,
+            status: limited ? "unavailable" : "available",
+            available_count: limited ? 0 : 1,
             last_seen_at: "2026-09-15T12:00:00.000Z",
           },
           jobs: { queued: 0, running: 0, failed: 0, succeeded: 0 },

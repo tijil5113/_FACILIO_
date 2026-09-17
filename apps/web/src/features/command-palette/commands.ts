@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { allNavItems } from "@/lib/navigation";
+import { allNavItems, commandLabelForNav } from "@/lib/navigation";
 import { toggleResolvedTheme } from "@/lib/preferences";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -27,7 +27,7 @@ export function useCommands(
   return useMemo(() => {
     const navigationCommands: CommandItem[] = allNavItems.map((item) => ({
       id: `nav:${item.to}`,
-      label: `Go to ${item.label}`,
+      label: commandLabelForNav(item),
       group: "Navigation",
       keywords: `${item.label} ${item.description}`,
       perform: () => {
@@ -57,9 +57,9 @@ export function useCommands(
       },
       {
         id: "help:open",
-        label: "Open Help",
+        label: "Get Help",
         group: "Workspace",
-        keywords: "help context recover what now",
+        keywords: "help context recover what now open help",
         perform: () => {
           useUiStore.getState().openHelp();
         },
@@ -115,7 +115,7 @@ export function useCommands(
         : []),
       {
         id: "cleanup:new",
-        label: "New cleanup",
+        label: "New Cleanup",
         group: "Workspace",
         keywords: "create pipeline workflow builder",
         perform: () => {

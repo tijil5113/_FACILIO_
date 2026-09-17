@@ -132,7 +132,7 @@ export function CommandPalette() {
         ) : (
           groups.map((group) => (
             <li key={group.group} className="px-2">
-              <p className="px-2 py-1 font-mono text-[10px] tracking-[0.16em] text-ink-muted uppercase">
+              <p className="type-meta px-2 py-1 text-ink-muted uppercase">
                 {group.group}
               </p>
               <ul>

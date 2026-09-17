@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
 import { DisabledHint } from "@/components/ui/DisabledHint";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { LearnMoreLink } from "@/features/learn/LearnMoreLink";
 import { RecoveryMessage } from "@/features/recovery/RecoveryMessage";
 import { mapRecoveryError } from "@/features/recovery/map-error";
@@ -167,7 +167,7 @@ export function GuidedCleanup({
   }
 
   if (recsQuery.isLoading) {
-    return <Skeleton className="h-64 w-full" />;
+    return <TableSkeleton rows={6} />;
   }
   if (recsQuery.isError) {
     return (
@@ -564,7 +564,7 @@ export function GuidedCleanup({
             })
             .then((workflow) => {
               setSaveOpen(false);
-              void navigate(`/workflows/${workflow.id}`);
+              void navigate(`/workflows/${workflow.id}?saved=1`);
             })
             .catch(() => {
               /* dialog shows error; cleaned version remains */

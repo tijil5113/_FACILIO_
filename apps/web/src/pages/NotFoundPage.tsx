@@ -1,19 +1,18 @@
-import { Link } from "react-router";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 
 export function NotFoundPage() {
   return (
     <section className="page-enter mx-auto max-w-xl">
-      <h1 className="text-[22px] font-semibold tracking-tight">Page not found</h1>
-      <p className="mt-3 text-sm leading-6 text-ink-secondary">
-        This page isn’t part of the FACILIO workspace. The link may be mistyped or no
-        longer valid.
+      <h1 className="type-page-title">Page not found</h1>
+      <p className="type-body mt-3 text-ink-secondary">
+        The page you’re looking for doesn’t exist or may have moved.
       </p>
-      <Link
-        to="/overview"
-        className="mt-6 inline-flex h-9 items-center rounded-[var(--facilio-radius-md)] border border-ink bg-ink px-3 text-sm font-medium text-canvas hover:bg-ink/90 dark:text-[#121410]"
-      >
-        Return to Home
-      </Link>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <ButtonLink to="/overview">Go Home</ButtonLink>
+        <ButtonLink to="/datasets" variant="secondary">
+          Datasets
+        </ButtonLink>
+      </div>
     </section>
   );
 }

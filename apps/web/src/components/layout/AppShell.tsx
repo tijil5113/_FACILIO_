@@ -9,7 +9,6 @@ import { SidebarNav } from "@/components/layout/SidebarNav";
 import { NoticeHost } from "@/components/ui/NoticeHost";
 import { CommandPalette } from "@/features/command-palette/CommandPalette";
 import { HelpDrawer } from "@/features/help/HelpDrawer";
-import { PreferencesSync } from "@/features/preferences/PreferencesSync";
 import { cn } from "@/lib/cn";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -51,14 +50,13 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
-      <PreferencesSync />
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
       <div className="flex min-h-screen">
         <aside
           className={cn(
-            "sticky top-0 hidden h-screen shrink-0 border-r border-line bg-sidebar transition-[width] duration-[var(--facilio-duration-base)] ease-out md:block",
+            "sticky top-0 hidden h-screen shrink-0 overflow-hidden border-r border-line bg-sidebar transition-[width] duration-[var(--facilio-duration-surface)] ease-[var(--facilio-ease)] md:block",
             sidebarCollapsed ? "w-16" : "w-60",
           )}
         >
@@ -69,7 +67,7 @@ export function AppShell() {
           <main
             id="main-content"
             tabIndex={-1}
-            className="flex-1 px-4 py-5 outline-none md:px-8 md:py-7"
+            className="page-gutter flex-1 outline-none"
           >
             <RouteFocus />
             <Outlet />

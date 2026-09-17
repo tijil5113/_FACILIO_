@@ -11,10 +11,18 @@ interface CalloutProps {
 
 const tones = {
   neutral: "border-line bg-surface",
-  warning: "border-warning/30 bg-warning-soft",
-  danger: "border-danger/30 bg-danger-soft",
-  info: "border-info/30 bg-info-soft",
-  success: "border-success/30 bg-success-soft",
+  warning: "border-warning/40 bg-warning-soft",
+  danger: "border-danger/40 bg-danger-soft",
+  info: "border-line bg-accent-soft",
+  success: "border-success/40 bg-success-soft",
+} as const;
+
+const markers = {
+  neutral: "text-ink-muted",
+  warning: "text-warning",
+  danger: "text-danger",
+  info: "text-accent",
+  success: "text-success",
 } as const;
 
 export function Callout({ tone = "neutral", title, children, action }: CalloutProps) {
@@ -25,11 +33,18 @@ export function Callout({ tone = "neutral", title, children, action }: CalloutPr
         tones[tone],
       )}
     >
-      <div>
-        <p className="text-sm font-medium text-ink">{title}</p>
-        {children ? (
-          <div className="mt-1 text-sm leading-6 text-ink-secondary">{children}</div>
-        ) : null}
+      <div className="flex min-w-0 items-start gap-2">
+        <span
+          className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", markers[tone])}
+          style={{ background: "currentColor" }}
+          aria-hidden="true"
+        />
+        <div>
+          <p className="type-card-title text-ink">{title}</p>
+          {children ? (
+            <div className="type-body mt-1 text-ink-secondary">{children}</div>
+          ) : null}
+        </div>
       </div>
       {action}
     </div>

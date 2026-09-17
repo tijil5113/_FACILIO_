@@ -1,10 +1,9 @@
-import { Menu, Search } from "lucide-react";
+import { Command, Menu } from "lucide-react";
 import { useLocation } from "react-router";
 
 import { IconButton } from "@/components/ui/IconButton";
 import { Kbd } from "@/components/ui/Kbd";
 import { HelpTrigger } from "@/features/help/HelpTrigger";
-import { ThemeToggle } from "@/features/preferences/ThemeToggle";
 import { CompactHealth } from "@/features/system-health/CompactHealth";
 import { titleForPath } from "@/lib/navigation";
 import { modifierLabel } from "@/lib/platform";
@@ -23,26 +22,22 @@ export function ContextBar() {
         <IconButton label="Open navigation" className="md:hidden" onClick={openMobileNav}>
           <Menu size={16} aria-hidden="true" />
         </IconButton>
-        <div className="min-w-0">
-          <p className="text-[11px] text-ink-muted">FACILIO</p>
-          <p className="truncate text-sm font-medium tracking-tight">{title}</p>
-        </div>
+        <p className="truncate text-sm font-medium tracking-tight text-ink">{title}</p>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <div className="hidden sm:flex">
           <CompactHealth />
         </div>
         <HelpTrigger />
-        <ThemeToggle />
         <button
           type="button"
           onClick={openCommandPalette}
-          className="inline-flex h-9 items-center gap-2 rounded-[var(--facilio-radius-md)] border border-line bg-raised px-2 text-xs text-ink-muted transition-colors duration-[var(--facilio-duration-fast)] ease-[var(--facilio-ease)] hover:bg-subtle hover:text-ink md:h-8"
+          className="inline-flex h-10 items-center gap-2 rounded-[var(--facilio-radius-md)] px-2 text-xs text-ink-muted transition-colors duration-[var(--facilio-duration-control)] ease-[var(--facilio-ease)] hover:bg-subtle hover:text-ink md:h-8"
           aria-label="Open command palette"
         >
-          <Search size={14} aria-hidden="true" />
+          <Command size={14} className="sm:hidden" aria-hidden="true" />
           <span className="hidden sm:inline">Commands</span>
-          <span className="hidden md:flex items-center gap-0.5">
+          <span className="hidden items-center gap-0.5 md:flex">
             <Kbd>{modifierLabel()}</Kbd>
             <Kbd>K</Kbd>
           </span>

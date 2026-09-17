@@ -1,5 +1,7 @@
 """Configuration validation tests."""
 
+import os
+
 import pytest
 from pydantic import ValidationError
 
@@ -109,6 +111,18 @@ def test_development_rejects_sqlite_when_root_env_is_postgres(monkeypatch) -> No
             SECRET_KEY="dev-key",
             DATABASE_URL="sqlite:///facilio.db",
         )
+
+
+def test_get_settings_drops_flask_injected_sqlite(monkeypatch) -> None:
+    from facilio.core import config as config_mod
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///facilio.db")
+    monkeypatch.setattr(
+        config_mod, "_env_file_database_backend", lambda _path: "PostgreSQL"
+    )
+    config_mod.clear_settings_cache()
+    config_mod._prefer_canonical_database_url()
+    assert os.environ.get("DATABASE_URL") is None
 
 
 def test_canonical_env_file_is_repository_root() -> None:

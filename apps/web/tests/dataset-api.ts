@@ -256,6 +256,45 @@ export const readyIssues: QualityIssue[] = [
   },
 ];
 
+export const derivedVersionId = "31111111-1111-4111-8111-111111111111";
+export const branchVersionId = "41111111-1111-4111-8111-111111111111";
+
+export const specialPreview: DatasetPreview = {
+  dataset_id: sample.id,
+  version_id: sample.current_version_id,
+  version_number: 1,
+  columns: [
+    { name: "amount", index: 0, dtype: "integer" },
+    { name: "active", index: 1, dtype: "boolean" },
+    { name: "note", index: 2, dtype: "text" },
+  ],
+  rows: [
+    [0, false, "ok"],
+    [null, true, ""],
+    [1, false, "a".repeat(80)],
+  ],
+  row_count: 40,
+  column_count: 12,
+  preview_row_count: 3,
+  truncated_rows: true,
+  truncated_columns: true,
+};
+
+export const highCardinalityIssue: QualityIssue = {
+  id: "HIGH_CARDINALITY:id",
+  code: "HIGH_CARDINALITY",
+  category: "STRUCTURE",
+  severity: "INFO",
+  title: "High cardinality",
+  description: "id has a high ratio of distinct values.",
+  column: "id",
+  affected_count: 20,
+  affected_percentage: 100,
+  evidence: [],
+  suggested_action: "Treat this column as an identifier or free text as appropriate.",
+  suggested_operations: [],
+};
+
 export function mockDatasetApi(options?: {
   list?: DatasetListResponse;
   detail?: DatasetDetail | "missing";
@@ -265,6 +304,8 @@ export function mockDatasetApi(options?: {
   remove?: "success";
   profile?: "missing" | "ready" | "failed";
   profileData?: DatasetProfile;
+  issues?: QualityIssue[];
+  versions?: "v1" | "v1-v2" | "branched";
   analyze?: "success" | "failure";
   previewTransform?: "change" | "noop" | "failure";
   applyTransform?: "success" | "failure";
@@ -289,27 +330,60 @@ export function mockDatasetApi(options?: {
     workflow_name: string | null;
     workflow_revision: number | null;
   };
-  let versions: MockVersion[] = [
-    {
-      id: sample.current_version_id as string,
-      dataset_id: sample.id,
-      version_number: 1,
-      parent_version_id: null as string | null,
-      kind: "ORIGINAL" as const,
-      label: "Original",
-      row_count: 2,
-      column_count: 2,
-      profile_status: "NOT_PROFILED" as const,
-      profiled_at: null as string | null,
-      created_at: sample.created_at,
-      is_current: true,
-      operation_code: null as string | null,
-      operation_summary: null as string | null,
-      created_by_workflow_run_id: null as string | null,
-      workflow_name: null as string | null,
-      workflow_revision: null as number | null,
-    },
-  ];
+  const originalVersion: MockVersion = {
+    id: sample.current_version_id as string,
+    dataset_id: sample.id,
+    version_number: 1,
+    parent_version_id: null,
+    kind: "ORIGINAL",
+    label: "Original",
+    row_count: 2,
+    column_count: 2,
+    profile_status: "NOT_PROFILED",
+    profiled_at: null,
+    created_at: sample.created_at,
+    is_current: options?.versions !== "v1-v2",
+    operation_code: null,
+    operation_summary: null,
+    created_by_workflow_run_id: null,
+    workflow_name: null,
+    workflow_revision: null,
+  };
+  const derivedVersion: MockVersion = {
+    id: derivedVersionId,
+    dataset_id: sample.id,
+    version_number: 2,
+    parent_version_id: originalVersion.id,
+    kind: "DERIVED",
+    label: "Trim whitespace",
+    row_count: 2,
+    column_count: 2,
+    profile_status: "READY",
+    profiled_at: readyProfile.profiled_at,
+    created_at: sample.updated_at,
+    is_current: options?.versions === "v1-v2",
+    operation_code: "TRIM_WHITESPACE",
+    operation_summary: "Trimmed whitespace on name.",
+    created_by_workflow_run_id: null,
+    workflow_name: null,
+    workflow_revision: null,
+  };
+  const branchVersion: MockVersion = {
+    ...derivedVersion,
+    id: branchVersionId,
+    version_number: 3,
+    is_current: false,
+    label: "Normalize case",
+    operation_code: "NORMALIZE_CASE",
+    operation_summary: "Normalized capitalization on city.",
+  };
+  let versions: MockVersion[] = [originalVersion];
+  if (options?.versions === "v1-v2") {
+    versions = [originalVersion, derivedVersion];
+  }
+  if (options?.versions === "branched") {
+    versions = [originalVersion, derivedVersion, branchVersion];
+  }
   let currentProfile: DatasetProfile | null =
     options?.profile === "ready"
       ? (options.profileData ?? readyProfile)
@@ -444,13 +518,14 @@ export function mockDatasetApi(options?: {
     }
 
     if (path.startsWith(`/api/v1/datasets/${sample.id}/issues`)) {
+      const items = options?.issues ?? readyIssues;
       return jsonResponse({
         success: true,
         data: {
-          items: readyIssues,
+          items,
           page: 1,
           page_size: 50,
-          total: readyIssues.length,
+          total: items.length,
         },
       });
     }

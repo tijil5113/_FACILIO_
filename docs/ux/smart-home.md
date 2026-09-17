@@ -10,9 +10,10 @@ Authoritative state comes from the datasets list plus API health — not from `l
 | --- | --- | --- |
 | Loading | Datasets query pending, no cached list | Skeleton Home. Do not flash first-run copy. |
 | Degraded | Health fetch failed **or** datasets list failed | Recover. No Upload / Try FACILIO CTAs. Compact explanation + Technical details (system health). |
-| Empty | Zero datasets | Start: Upload my data (existing dialog) and Try FACILIO. |
-| Sample-only | Every listed dataset has `is_sample` | Continue exploring the sample **and** Upload my data. |
-| Returning | At least one non-sample dataset | Continue working with real datasets. Try FACILIO is not a primary CTA. |
+| Empty | Zero datasets | First-run Welcome: Upload your data (existing dialog) and Try FACILIO. Signature transformation illustration. How FACILIO works. |
+| Sample-only | Every listed dataset has `is_sample` | Continue exploring the sample **and** Upload my data. Sample is labeled example/fictional data. |
+| Returning | At least one non-sample dataset | Compact Welcome back. Continue working from real datasets. Try FACILIO is not a primary CTA. |
+| Limited | Worker/queue unavailable while workspace still loads | First-run and sample-only add a calm callout after the primary actions. Returning Home keeps CompactHealth in the shell and does not lead with a full-width unavailable banner. Upload/analyze remain. |
 
 Partial failure: returning Home still renders datasets if the jobs or workflows list fails. Those sections show a retry callout.
 
@@ -46,9 +47,9 @@ Optional cues are stored only in `localStorage` under `facilio.onboarding.*` (`h
 
 ## Home queries
 
-Empty Home: health (shell) + datasets list. Jobs and cleanups are not fetched.
+Empty Home: health (shell) + datasets list + workspace summary. Jobs and cleanups are not fetched.
 
-Returning Home: datasets list (includes `profile_status`, `issue_count`, version fields) + jobs page 1 (`page_size=5`) + workflows page 1. No per-dataset profile requests.
+Returning Home: workspace summary / datasets list (includes `profile_status`, `issue_count`, version fields) + jobs page 1 (`page_size=5`). Cleanups are linked, not listed. No per-dataset profile requests.
 
 ## Known limitations
 

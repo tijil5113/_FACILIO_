@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
 
 interface EmptyStateProps {
@@ -9,6 +8,7 @@ interface EmptyStateProps {
   detail?: string;
   upcoming?: boolean;
   visual?: ReactNode;
+  actions?: ReactNode;
   children?: ReactNode;
 }
 
@@ -18,30 +18,22 @@ export function EmptyState({
   detail,
   upcoming = false,
   visual,
+  actions,
   children,
 }: EmptyStateProps) {
   return (
     <section className="page-enter mx-auto max-w-3xl">
       {upcoming ? (
-        <div className="mb-3">
-          <Badge tone="accent">Upcoming</Badge>
-        </div>
+        <p className="type-meta mb-3 text-ink-muted uppercase">Upcoming</p>
       ) : null}
-      <h1 className="text-[22px] font-semibold tracking-tight text-ink">{title}</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-secondary">{summary}</p>
+      <h1 className="type-page-title text-ink">{title}</h1>
+      <p className="type-body mt-2 max-w-2xl text-ink-secondary">{summary}</p>
       {detail ? (
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">{detail}</p>
+        <p className="type-body mt-2 max-w-2xl text-ink-muted">{detail}</p>
       ) : null}
-      {visual ? (
-        <div
-          className={cn(
-            "mt-8 rounded-[var(--facilio-radius-md)] border border-line bg-surface p-6",
-          )}
-        >
-          {visual}
-        </div>
-      ) : null}
-      {children}
+      {visual ? <div className="mt-8">{visual}</div> : null}
+      {actions ? <div className="mt-6 flex flex-wrap gap-2">{actions}</div> : null}
+      {children ? <div className={cn(actions ? "mt-4" : "mt-6")}>{children}</div> : null}
     </section>
   );
 }

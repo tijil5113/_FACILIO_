@@ -1,18 +1,33 @@
 # FACILIO navigation and surface blueprint
 
-Primary navigation and surfaces as shipped. `/runs` and `/quality` remain unlinked advanced routes. `/exports` remains unlinked and unfinished.
+Primary navigation and surfaces as shipped. `/runs` and `/quality` remain unlinked advanced routes. `/exports` remains unlinked and states that downloading files is not available.
+
+## 0. Public vs application routes
+
+| Route | Surface | Notes |
+| --- | --- | --- |
+| `/` | Public Home | Discovery. Not the workspace. |
+| `/login` | Sign in | Presentational. Auth backend is not implemented. |
+| `/signup` | Create account | Presentational. Auth backend is not implemented. |
+| `/app` | Redirect | Alias → `/overview`. Existing deep links are unchanged. |
+| `/overview` | Application Home | VM3 Smart Home. Internal logo and nav Home. |
+| `/datasets`, `/datasets/:id` | Datasets | Unchanged. |
+| `/workflows`, `/workflows/:id` | Cleanups | Unchanged. |
+| `/jobs`, `/jobs/:id` | Activity | Unchanged. |
+| `/learn` | Learn | Unchanged. Linked from public nav. |
+| `/settings` | Settings | Unchanged. |
+
+Application routes stay at their existing paths so deep links do not break.
 
 ## 1. Final primary navigation
 
-**CURRENT** (`apps/web/src/lib/navigation.ts`): Workspace = Overview, Datasets, Workflows, Runs, Data Quality. Operations = Jobs, Exports. System = Settings.
-
-**PROPOSED primary (desktop + mobile):**
+**CURRENT** (`apps/web/src/lib/navigation.ts`): Home, Datasets, Cleanups, Activity, Learn, Settings.
 
 1. **Home** → `/overview`
 2. **Datasets** → `/datasets`
 3. **Cleanups** → `/workflows` (user-facing name for workflows)
 4. **Activity** → `/jobs` (composed run+job UX; not two nav items)
-5. **Learn** → `/learn` — **only after 8D has content**. Do not add an empty Learn item in 8A-3.
+5. **Learn** → `/learn`
 6. **Settings** → `/settings`
 
 **Not in primary nav:**
@@ -22,7 +37,7 @@ Primary navigation and surfaces as shipped. `/runs` and `/quality` remain unlink
 | Data Quality `/quality` | **KEEP BUT REMOVE FROM PRIMARY NAV.** Reach from Home (“Needs attention”), dataset Problems, command palette, direct URL. Optional Datasets subview later. |
 | Runs `/runs` | **MERGE VISUALLY into Activity.** Keep route for deep links and technical users (command: “Open run records”). |
 | Jobs `/jobs` | **KEEP AS PRIMARY via Activity label.** Same route. |
-| Exports `/exports` | **HIDE UNTIL IMPLEMENTED.** Remove from `workspaceNav`/`operationsNav`. Mention in Learn/roadmap or Settings “Coming later” only if needed. Route may 404 or stay unlinked. |
+| Exports `/exports` | **UNLINKED.** Honest unavailable page. Not advertised as a working product. |
 
 **Section headings:** Stop using “Workspace / Operations / System” as user-facing IA. Use a single list, Settings last. Collapsed icon nav keeps accessible names.
 
@@ -30,8 +45,10 @@ Primary navigation and surfaces as shipped. `/runs` and `/quality` remain unlink
 
 | Current route | Current purpose | Future user-facing purpose | Nav | Future label | Redirect? | Backend change? | Phase |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/` → `/overview` | Architecture home | Home: start / continue | Primary | Home | No | No | 8A-3 copy; 8B first-run |
-| `/overview` | Stats + health + capabilities | Home | Primary | Home | No | No | 8A-3, 8B |
+| `/` | Public Home | Discovery landing | Public | FACILIO | No | No | VM8 |
+| `/login`, `/signup` | Auth presentation | Sign in / Create account (no backend) | Public | Sign in | No | No | VM8 |
+| `/app` | Alias | Redirects to `/overview` | — | — | Yes → `/overview` | No | VM8 |
+| `/overview` | Application Home | Home: start / continue | Primary | Home | No | No | 8A-3, 8B, VM3 |
 | `/datasets` | List + upload | Your data | Primary | Datasets | No | No | 8A-3 |
 | `/datasets/:id` | 7-tab workspace | Dataset workspace | Context | Dataset name in chrome | No | No | 8A-3 IA labels; 8C clean |
 | `/workflows` | Catalog | Saved cleanups | Primary | Cleanups | No | No | 8A-3 copy |
@@ -43,10 +60,8 @@ Primary navigation and surfaces as shipped. `/runs` and `/quality` remain unlink
 | `/quality` | Global rollup | Needs-attention list | Unlinked primary | Quality overview | No | No | 8A-3 unlinked |
 | `/exports` | Placeholder | Hidden | Hidden | — | No | No | 8A-3 unlink |
 | `/settings` | Theme, nav, motion | Same + optional health details | Primary | Settings | No | No | 8A-3 health move |
-| `/learn` | None | Learn center | Primary after 8D | Learn | New route 8D | No | 8D |
-| `*` | 404 | 404 + Home | — | — | No | No | 8A-3 copy only if needed |
-
-**8A-3 must not create `/learn` as an empty primary destination.**
+| `/learn` | Learn hub + modules | Learn FACILIO | Primary | Learn | No | No | VM7 |
+| `*` | 404 | Page not found + Home / Datasets | — | — | No | No | VM7 |
 
 ## 3. Context bar
 
